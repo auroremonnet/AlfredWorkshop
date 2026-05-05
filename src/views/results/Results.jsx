@@ -1,5 +1,6 @@
 import { C } from "../../constants.js";
 import { Header } from "../../components/Header.jsx";
+import KpiBoard from "./KpiBoard.jsx";
 
 // ═══════════════════════════════════════════════════════════════
 // RESULTS — onglet "Résultats" (KPIs · Décisions · Weekly reviews)
@@ -13,9 +14,7 @@ export default function Results({ view, setView }) {
       <Header view={view} setView={setView} title="Mesure des résultats" subtitle="KPIs · Décisions · Weekly reviews" />
 
       <div style={{ padding: "20px 28px", maxWidth: 1400, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", padding: 80, color: C.textDim, fontSize: 14 }}>
-          Section en cours de construction.
-        </div>
+        <KpiBoard />
       </div>
     </div>
   );

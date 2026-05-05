@@ -289,3 +289,22 @@ export const selectStyle = {
 };
 
 export const lblStyle = { color: C.textDim, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", paddingTop: 8 };
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS DATE
+// ═══════════════════════════════════════════════════════════════
+export const todayISO = () => new Date().toISOString().slice(0, 10);
+
+export const formatDateShort = (iso) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+};
+
+export const formatDateLong = (iso) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+};
