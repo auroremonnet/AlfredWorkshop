@@ -5,6 +5,7 @@ import {
 } from "../constants.js";
 import { usePersistedState } from "../hooks/usePersistedState.js";
 import { AlfredBowtie, Btn, FibBadge, Avatar, StatCard } from "../components/ui.jsx";
+import { Header } from "../components/Header.jsx";
 import { TicketModal } from "../components/TicketModal.jsx";
 import { TicketRow } from "../components/TicketRow.jsx";
 import { EisenhowerView } from "../components/EisenhowerView.jsx";
@@ -12,7 +13,7 @@ import { EisenhowerView } from "../components/EisenhowerView.jsx";
 // ═══════════════════════════════════════════════════════════════
 // WORKSPACE — vue tickets (liste + matrice Eisenhower)
 // ═══════════════════════════════════════════════════════════════
-export default function Workspace() {
+export default function Workspace({ view, setView }) {
   const [tickets, setTickets, loading] = usePersistedState("alfred-tickets-v2", DEFAULT_TICKETS);
   const [editingTicket, setEditingTicket] = useState(null);
   const [filterPhase, setFilterPhase] = useState("all");
@@ -20,7 +21,7 @@ export default function Workspace() {
   const [filterAssignee, setFilterAssignee] = useState("all");
   const [filterQuadrant, setFilterQuadrant] = useState("all");
   const [search, setSearch] = useState("");
-  const [view, setView] = useState("list"); // "list" | "matrix"
+  const [listView, setListView] = useState("list"); // "list" | "matrix"
   const [exported, setExported] = useState(null);
 
   const filtered = useMemo(() => {
@@ -109,21 +110,11 @@ export default function Workspace() {
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     }}>
       {/* ═══ HEADER ═══ */}
-      <header style={{
-        borderBottom: `1px solid ${C.border}`, background: `${C.bgPanel}F0`, backdropFilter: "blur(12px)",
-        position: "sticky", top: 0, zIndex: 50, padding: "14px 28px",
-        display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap",
-      }}>
-        <AlfredBowtie size={36} withText />
-        <div style={{ borderLeft: `1px solid ${C.borderSubtle}`, paddingLeft: 16, marginLeft: 4 }}>
-          <div style={{ color: C.textDim, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 700 }}>Roadmap Tickets</div>
-          <div style={{ color: C.encre, fontSize: 13, fontWeight: 600, marginTop: 2 }}>Workspace stratégique</div>
-        </div>
-        <div style={{ flex: 1, minWidth: 20 }} />
+      <Header view={view} setView={setView} title="Roadmap Tickets" subtitle="Workspace stratégique">
         <Btn variant="secondary" size="sm" onClick={exportMarkdown}>📄 Export</Btn>
         <Btn variant="ghost" size="sm" onClick={resetData}>↻ Reset</Btn>
         <Btn variant="champagne" size="sm" onClick={addTicket}>+ Nouveau ticket</Btn>
-      </header>
+      </Header>
 
       <div style={{ padding: "20px 28px", maxWidth: 1400, margin: "0 auto" }}>
         {/* ═══ STATS BAR ═══ */}
@@ -170,17 +161,17 @@ export default function Workspace() {
           borderRadius: 8, marginBottom: 16,
         }}>
           <div style={{ display: "flex", gap: 4, padding: 3, background: C.bgSubtle, borderRadius: 6 }}>
-            <button onClick={() => setView("list")} style={{
+            <button onClick={() => setListView("list")} style={{
               padding: "6px 14px", borderRadius: 4, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit",
-              background: view === "list" ? C.bgPanel : "transparent",
-              color: view === "list" ? C.encre : C.textMuted,
-              boxShadow: view === "list" ? `0 1px 3px rgba(15,27,45,0.1)` : "none",
+              background: listView === "list" ? C.bgPanel : "transparent",
+              color: listView === "list" ? C.encre : C.textMuted,
+              boxShadow: listView === "list" ? `0 1px 3px rgba(15,27,45,0.1)` : "none",
             }}>📋 Liste</button>
-            <button onClick={() => setView("matrix")} style={{
+            <button onClick={() => setListView("matrix")} style={{
               padding: "6px 14px", borderRadius: 4, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit",
-              background: view === "matrix" ? C.bgPanel : "transparent",
-              color: view === "matrix" ? C.encre : C.textMuted,
-              boxShadow: view === "matrix" ? `0 1px 3px rgba(15,27,45,0.1)` : "none",
+              background: listView === "matrix" ? C.bgPanel : "transparent",
+              color: listView === "matrix" ? C.encre : C.textMuted,
+              boxShadow: listView === "matrix" ? `0 1px 3px rgba(15,27,45,0.1)` : "none",
             }}>🎯 Matrice</button>
           </div>
 
@@ -210,7 +201,7 @@ export default function Workspace() {
         </div>
 
         {/* ═══ MAIN VIEW ═══ */}
-        {view === "matrix" ? (
+        {listView === "matrix" ? (
           <EisenhowerView tickets={filtered} onTicketClick={setEditingTicket} />
         ) : (
           <>
