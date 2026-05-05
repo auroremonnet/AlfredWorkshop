@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   C, STATUSES, QUADRANTS, TEAM, PHASES, FIB_VALUES, FIB_LABEL,
   DEFAULT_TICKETS, selectStyle,
@@ -13,9 +13,16 @@ import { EisenhowerView } from "../components/EisenhowerView.jsx";
 // ═══════════════════════════════════════════════════════════════
 // WORKSPACE — vue tickets (liste + matrice Eisenhower)
 // ═══════════════════════════════════════════════════════════════
-export default function Workspace({ view, setView }) {
+export default function Workspace({ view, setView, pendingTicketId, clearPendingTicket }) {
   const [tickets, setTickets, loading] = usePersistedState("alfred-tickets-v2", DEFAULT_TICKETS);
   const [editingTicket, setEditingTicket] = useState(null);
+
+  useEffect(() => {
+    if (loading || !pendingTicketId) return;
+    const t = tickets.find((x) => x.id === pendingTicketId);
+    if (t) setEditingTicket(t);
+    clearPendingTicket();
+  }, [pendingTicketId, loading, tickets, clearPendingTicket]);
   const [filterPhase, setFilterPhase] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterAssignee, setFilterAssignee] = useState("all");

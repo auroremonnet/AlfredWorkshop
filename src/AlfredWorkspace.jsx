@@ -4,7 +4,21 @@ import Results from "./views/results/Results.jsx";
 
 export default function AlfredWorkspace() {
   const [view, setView] = useState("workspace");
-  return view === "workspace"
-    ? <Workspace view={view} setView={setView} />
-    : <Results view={view} setView={setView} />;
+  const [pendingTicketId, setPendingTicketId] = useState(null);
+
+  const openTicket = (id) => {
+    setPendingTicketId(id);
+    setView("workspace");
+  };
+
+  return view === "workspace" ? (
+    <Workspace
+      view={view}
+      setView={setView}
+      pendingTicketId={pendingTicketId}
+      clearPendingTicket={() => setPendingTicketId(null)}
+    />
+  ) : (
+    <Results view={view} setView={setView} openTicket={openTicket} />
+  );
 }

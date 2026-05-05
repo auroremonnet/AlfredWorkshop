@@ -308,3 +308,12 @@ export const formatDateLong = (iso) => {
   if (isNaN(d.getTime())) return iso;
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 };
+
+// Lundi de la semaine d'une date ISO (en local). Default = today.
+export const mondayOf = (iso) => {
+  const d = iso ? new Date(iso) : new Date();
+  const day = d.getDay(); // 0 = dimanche, 1 = lundi, …, 6 = samedi
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+};
