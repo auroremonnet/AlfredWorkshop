@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   C, STATUSES, QUADRANTS, TEAM, PHASES, FIB_VALUES, FIB_LABEL,
   DEFAULT_TICKETS, selectStyle,
 } from "../constants.js";
+import { usePersistedState } from "../hooks/usePersistedState.js";
 import { AlfredBowtie, Btn, FibBadge, Avatar, StatCard } from "../components/ui.jsx";
 import { TicketModal } from "../components/TicketModal.jsx";
 import { TicketRow } from "../components/TicketRow.jsx";
@@ -12,8 +13,7 @@ import { EisenhowerView } from "../components/EisenhowerView.jsx";
 // WORKSPACE — vue tickets (liste + matrice Eisenhower)
 // ═══════════════════════════════════════════════════════════════
 export default function Workspace() {
-  const [tickets, setTickets] = useState(DEFAULT_TICKETS);
-  const [loading, setLoading] = useState(true);
+  const [tickets, setTickets, loading] = usePersistedState("alfred-tickets-v2", DEFAULT_TICKETS);
   const [editingTicket, setEditingTicket] = useState(null);
   const [filterPhase, setFilterPhase] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -22,28 +22,6 @@ export default function Workspace() {
   const [search, setSearch] = useState("");
   const [view, setView] = useState("list"); // "list" | "matrix"
   const [exported, setExported] = useState(null);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("alfred-tickets-v2");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) setTickets(parsed);
-      }
-    } catch (e) {
-      console.warn("Could not load saved tickets:", e);
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    if (loading) return;
-    try {
-      localStorage.setItem("alfred-tickets-v2", JSON.stringify(tickets));
-    } catch (e) {
-      console.warn("Could not save tickets:", e);
-    }
-  }, [tickets, loading]);
 
   const filtered = useMemo(() => {
     return tickets.filter((t) => {
