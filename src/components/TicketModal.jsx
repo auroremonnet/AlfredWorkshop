@@ -111,6 +111,14 @@ export const TicketModal = ({ ticket, onClose, onSave, onDelete }) => {
             style={{ ...inputStyle, minHeight: 140, resize: "vertical", fontFamily: "inherit", lineHeight: 1.6 }}
           />
 
+          <label style={{ ...lblStyle, marginTop: 18, marginBottom: 8, display: "block" }}>📝 Notes</label>
+          <textarea
+            value={t.notes || ""}
+            onChange={(e) => setT({ ...t, notes: e.target.value })}
+            placeholder="Notes libres : décisions prises, blocages, contexte, idées…"
+            style={{ ...inputStyle, minHeight: 100, resize: "vertical", fontFamily: "inherit", lineHeight: 1.6 }}
+          />
+
           <div style={{ display: "flex", gap: 10, marginTop: 24, justifyContent: "space-between", flexWrap: "wrap" }}>
             <Btn variant="danger" onClick={() => { if (confirm("Supprimer ce ticket ?")) { onDelete(t.id); onClose(); } }}>🗑 Supprimer</Btn>
             <div style={{ display: "flex", gap: 10 }}>

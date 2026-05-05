@@ -15,7 +15,7 @@ export const TicketRow = ({ t, onClick, onStatusCycle }) => {
       onMouseLeave={() => setHover(false)}
       style={{
         display: "grid",
-        gridTemplateColumns: "55px 95px 1fr auto auto auto auto auto",
+        gridTemplateColumns: "55px 95px 1fr auto auto auto auto auto auto",
         gap: 12, alignItems: "center", padding: "12px 16px",
         background: hover ? C.bgHover : C.bgCard,
         border: `1px solid ${hover ? C.borderStrong : C.borderSubtle}`,
@@ -39,6 +39,10 @@ export const TicketRow = ({ t, onClick, onStatusCycle }) => {
         )}
       </div>
       <Avatar assigneeId={t.assignee} size={28} />
+      <span title={t.notes?.trim() ? "A des notes" : ""} style={{
+        fontSize: 13, opacity: t.notes?.trim() ? 0.7 : 0,
+        color: C.champagneDeep, width: 16, textAlign: "center",
+      }}>📝</span>
       <QuadrantPill quadrantId={t.quadrant} />
       <FibBadge n={t.fib} size="sm" />
       <StatusPill statusId={t.status} onClick={(e) => { e.stopPropagation(); onStatusCycle(t); }} />
