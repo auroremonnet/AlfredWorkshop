@@ -13,7 +13,7 @@ import { EisenhowerView } from "../components/EisenhowerView.jsx";
 // ═══════════════════════════════════════════════════════════════
 // WORKSPACE — vue tickets (liste + matrice Eisenhower)
 // ═══════════════════════════════════════════════════════════════
-export default function Workspace({ view, setView, pendingTicketId, clearPendingTicket }) {
+export default function Workspace({ view, setView, pendingTicketId, clearPendingTicket, userEmail, onSignOut }) {
   const [tickets, setTickets, loading] = usePersistedState("alfred-tickets-v2", DEFAULT_TICKETS);
   const [editingTicket, setEditingTicket] = useState(null);
 
@@ -117,7 +117,14 @@ export default function Workspace({ view, setView, pendingTicketId, clearPending
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     }}>
       {/* ═══ HEADER ═══ */}
-      <Header view={view} setView={setView} title="Roadmap Tickets" subtitle="Workspace stratégique">
+      <Header
+        view={view}
+        setView={setView}
+        title="Roadmap Tickets"
+        subtitle="Workspace stratégique"
+        userEmail={userEmail}
+        onSignOut={onSignOut}
+      >
         <Btn variant="secondary" size="sm" onClick={exportMarkdown}>📄 Export</Btn>
         <Btn variant="ghost" size="sm" onClick={resetData}>↻ Reset</Btn>
         <Btn variant="champagne" size="sm" onClick={addTicket}>+ Nouveau ticket</Btn>
