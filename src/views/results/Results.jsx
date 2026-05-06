@@ -14,6 +14,8 @@ export default function Results({
   view, setView, openTicket, userEmail, onSignOut,
   tickets, error, clearError,
   kpis, addKpi, updateKpi, deleteKpi,
+  decisions, addDecision, updateDecision, deleteDecision,
+  reviews, addReview, updateReview, deleteReview,
 }) {
   return (
     <div style={{
@@ -33,8 +35,20 @@ export default function Results({
 
       <div style={{ padding: "20px 28px", maxWidth: 1400, margin: "0 auto" }}>
         <KpiBoard kpis={kpis} addKpi={addKpi} updateKpi={updateKpi} deleteKpi={deleteKpi} />
-        <DecisionLog tickets={tickets} openTicket={openTicket} />
-        <WeeklyReviews />
+        <DecisionLog
+          tickets={tickets}
+          openTicket={openTicket}
+          decisions={decisions}
+          addDecision={addDecision}
+          updateDecision={updateDecision}
+          deleteDecision={deleteDecision}
+        />
+        <WeeklyReviews
+          reviews={reviews}
+          addReview={addReview}
+          updateReview={updateReview}
+          deleteReview={deleteReview}
+        />
       </div>
     </div>
   );

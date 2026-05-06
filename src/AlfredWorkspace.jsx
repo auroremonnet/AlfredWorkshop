@@ -3,6 +3,8 @@ import { C } from "./constants.js";
 import { supabase } from "./lib/supabase.js";
 import { useTickets } from "./hooks/useTickets.js";
 import { useKpis } from "./hooks/useKpis.js";
+import { useDecisions } from "./hooks/useDecisions.js";
+import { useReviews } from "./hooks/useReviews.js";
 import { AlfredBowtie, Btn } from "./components/ui.jsx";
 import Login from "./components/Login.jsx";
 import Workspace from "./views/Workspace.jsx";
@@ -54,9 +56,12 @@ function AuthedApp({ session, onSignOut }) {
   // Tickets : source unique de vérité, partagée entre Workspace et Results.
   const ticketsHook = useTickets();
 
-  // KPIs : ne bloquent pas l'affichage initial. KpiBoard montre un mini-
-  // loader pendant kpis === null et l'app reste utilisable autour.
+  // KPIs / décisions / reviews : ne bloquent pas l'affichage initial.
+  // Chaque section affiche son propre mini-loader pendant le fetch
+  // initial et l'app reste utilisable autour.
   const kpisHook = useKpis();
+  const decisionsHook = useDecisions(ticketsHook.tickets);
+  const reviewsHook = useReviews();
 
   const openTicket = (id) => {
     setPendingTicketId(id);
@@ -86,12 +91,14 @@ function AuthedApp({ session, onSignOut }) {
 
   const userEmail = session.user?.email;
 
-  // Erreur Results = première erreur non-null parmi les hooks Results
-  // (pour l'instant juste KPIs ; décisions et reviews seront ajoutées
-  // au commit suivant). clearResultsError clear toutes les sources.
-  const resultsError = kpisHook.error;
+  // Erreur Results = première erreur non-null parmi les 3 hooks Results.
+  // clearResultsError clear toutes les sources (l'utilisateur ne voit
+  // qu'un bandeau à la fois, donc on clear tout pour être safe).
+  const resultsError = kpisHook.error || decisionsHook.error || reviewsHook.error;
   const clearResultsError = () => {
     kpisHook.clearError();
+    decisionsHook.clearError();
+    reviewsHook.clearError();
   };
 
   return view === "workspace" ? (
@@ -122,6 +129,14 @@ function AuthedApp({ session, onSignOut }) {
       addKpi={kpisHook.addKpi}
       updateKpi={kpisHook.updateKpi}
       deleteKpi={kpisHook.deleteKpi}
+      decisions={decisionsHook.decisions}
+      addDecision={decisionsHook.addDecision}
+      updateDecision={decisionsHook.updateDecision}
+      deleteDecision={decisionsHook.deleteDecision}
+      reviews={reviewsHook.reviews}
+      addReview={reviewsHook.addReview}
+      updateReview={reviewsHook.updateReview}
+      deleteReview={reviewsHook.deleteReview}
       error={resultsError}
       clearError={clearResultsError}
     />
