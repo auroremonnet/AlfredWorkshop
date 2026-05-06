@@ -1,10 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   C, STATUSES, QUADRANTS, TEAM, PHASES, FIB_VALUES, FIB_LABEL,
-  DEFAULT_TICKETS, selectStyle,
+  selectStyle,
 } from "../constants.js";
-import { usePersistedState } from "../hooks/usePersistedState.js";
-import { AlfredBowtie, Btn, FibBadge, Avatar, StatCard } from "../components/ui.jsx";
+import { Btn, FibBadge, Avatar, StatCard } from "../components/ui.jsx";
 import { Header } from "../components/Header.jsx";
 import { TicketModal } from "../components/TicketModal.jsx";
 import { TicketRow } from "../components/TicketRow.jsx";
@@ -12,17 +11,16 @@ import { EisenhowerView } from "../components/EisenhowerView.jsx";
 
 // ═══════════════════════════════════════════════════════════════
 // WORKSPACE — vue tickets (liste + matrice Eisenhower)
+//
+// Les tickets et leurs mutations viennent en props depuis le shell
+// (qui les sert via useTickets + Supabase).
 // ═══════════════════════════════════════════════════════════════
-export default function Workspace({ view, setView, pendingTicketId, clearPendingTicket, userEmail, onSignOut }) {
-  const [tickets, setTickets, loading] = usePersistedState("alfred-tickets-v2", DEFAULT_TICKETS);
+export default function Workspace({
+  view, setView, pendingTicketId, clearPendingTicket, userEmail, onSignOut,
+  tickets, addTicket, updateTicket, deleteTicket, resetToDefaults,
+  error, clearError,
+}) {
   const [editingTicket, setEditingTicket] = useState(null);
-
-  useEffect(() => {
-    if (loading || !pendingTicketId) return;
-    const t = tickets.find((x) => x.id === pendingTicketId);
-    if (t) setEditingTicket(t);
-    clearPendingTicket();
-  }, [pendingTicketId, loading, tickets, clearPendingTicket]);
   const [filterPhase, setFilterPhase] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterAssignee, setFilterAssignee] = useState("all");
@@ -30,6 +28,13 @@ export default function Workspace({ view, setView, pendingTicketId, clearPending
   const [search, setSearch] = useState("");
   const [listView, setListView] = useState("list"); // "list" | "matrix"
   const [exported, setExported] = useState(null);
+
+  useEffect(() => {
+    if (!pendingTicketId) return;
+    const t = tickets.find((x) => x.id === pendingTicketId);
+    if (t) setEditingTicket(t);
+    clearPendingTicket();
+  }, [pendingTicketId, tickets, clearPendingTicket]);
 
   const filtered = useMemo(() => {
     return tickets.filter((t) => {
@@ -50,14 +55,13 @@ export default function Workspace({ view, setView, pendingTicketId, clearPending
     return { total: tickets.length, byStatus, byAssignee, totalFib, doneFib, progress: totalFib ? Math.round((doneFib / totalFib) * 100) : 0 };
   }, [tickets]);
 
-  const saveTicket = (t) => setTickets((prev) => prev.map((x) => (x.id === t.id ? t : x)));
-  const deleteTicket = (id) => setTickets((prev) => prev.filter((t) => t.id !== id));
+  const saveTicket = (t) => updateTicket(t);
   const cycleStatus = (t) => {
     const idx = STATUSES.findIndex((s) => s.id === t.status);
     const next = STATUSES[(idx + 1) % STATUSES.length];
-    saveTicket({ ...t, status: next.id });
+    updateTicket({ ...t, status: next.id });
   };
-  const addTicket = () => {
+  const handleAddTicket = () => {
     const ids = tickets.map((t) => parseInt(t.id.replace(/\D/g, ""))).filter((n) => !isNaN(n));
     const nextNum = ids.length ? Math.max(...ids) + 1 : 1;
     const newT = {
@@ -67,9 +71,13 @@ export default function Workspace({ view, setView, pendingTicketId, clearPending
       fib: 3, status: "todo", deps: "",
       quadrant: filterQuadrant !== "all" ? filterQuadrant : "schedule",
       assignee: filterAssignee !== "all" ? filterAssignee : "unassigned",
+      notes: "",
     };
-    setTickets((prev) => [...prev, newT]);
+    addTicket(newT);
     setEditingTicket(newT);
+  };
+  const handleResetData = () => {
+    if (confirm("Réinitialiser tous les tickets aux valeurs par défaut ?")) resetToDefaults();
   };
 
   const exportMarkdown = () => {
@@ -99,18 +107,6 @@ export default function Workspace({ view, setView, pendingTicketId, clearPending
     setExported(md);
   };
 
-  const resetData = () => {
-    if (confirm("Réinitialiser tous les tickets aux valeurs par défaut ?")) setTickets(DEFAULT_TICKETS);
-  };
-
-  if (loading) {
-    return (
-      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg }}>
-        <AlfredBowtie size={60} withText />
-      </div>
-    );
-  }
-
   return (
     <div style={{
       minHeight: "100vh", background: C.bg, color: C.text,
@@ -126,9 +122,11 @@ export default function Workspace({ view, setView, pendingTicketId, clearPending
         onSignOut={onSignOut}
       >
         <Btn variant="secondary" size="sm" onClick={exportMarkdown}>📄 Export</Btn>
-        <Btn variant="ghost" size="sm" onClick={resetData}>↻ Reset</Btn>
-        <Btn variant="champagne" size="sm" onClick={addTicket}>+ Nouveau ticket</Btn>
+        <Btn variant="ghost" size="sm" onClick={handleResetData}>↻ Reset</Btn>
+        <Btn variant="champagne" size="sm" onClick={handleAddTicket}>+ Nouveau ticket</Btn>
       </Header>
+
+      <ErrorBanner error={error} onDismiss={clearError} />
 
       <div style={{ padding: "20px 28px", maxWidth: 1400, margin: "0 auto" }}>
         {/* ═══ STATS BAR ═══ */}
@@ -297,6 +295,28 @@ export default function Workspace({ view, setView, pendingTicketId, clearPending
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ERROR BANNER — sticky en haut de page, dismissible
+// ═══════════════════════════════════════════════════════════════
+function ErrorBanner({ error, onDismiss }) {
+  if (!error) return null;
+  return (
+    <div style={{
+      position: "sticky", top: 64, zIndex: 49,
+      padding: "10px 28px", background: "rgba(199,62,71,0.08)",
+      borderBottom: "1px solid rgba(199,62,71,0.3)", color: "#C73E47",
+      display: "flex", alignItems: "center", gap: 12, fontSize: 13, fontWeight: 600,
+    }}>
+      <span>⚠</span>
+      <span style={{ flex: 1 }}>{error}</span>
+      <button onClick={onDismiss} style={{
+        background: "transparent", border: "none", color: "#C73E47",
+        cursor: "pointer", fontSize: 16, padding: "0 6px", fontFamily: "inherit",
+      }}>✕</button>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { C } from "./constants.js";
 import { supabase } from "./lib/supabase.js";
-import { AlfredBowtie } from "./components/ui.jsx";
+import { useTickets } from "./hooks/useTickets.js";
+import { AlfredBowtie, Btn } from "./components/ui.jsx";
 import Login from "./components/Login.jsx";
 import Workspace from "./views/Workspace.jsx";
 import Results from "./views/results/Results.jsx";
@@ -11,11 +12,9 @@ import Results from "./views/results/Results.jsx";
 //
 // session === undefined : on charge la session initiale
 // session === null      : pas connecté → écran de login
-// session truthy        : connecté → app normale
+// session truthy        : connecté → <AuthedApp /> qui charge les tickets
 // ═══════════════════════════════════════════════════════════════
 export default function AlfredWorkspace() {
-  const [view, setView] = useState("workspace");
-  const [pendingTicketId, setPendingTicketId] = useState(null);
   const [session, setSession] = useState(undefined);
 
   useEffect(() => {
@@ -32,27 +31,57 @@ export default function AlfredWorkspace() {
     };
   }, []);
 
-  // signOut ne touche PAS au localStorage : tickets/KPIs/décisions/reviews
-  // restent intacts. Migration future, pas une suppression.
-  const onSignOut = () => supabase.auth.signOut();
+  if (session === undefined) {
+    return <FullScreenBowtie />;
+  }
+
+  if (session === null) {
+    return <Login />;
+  }
+
+  // signOut ne touche PAS au localStorage : KPIs/décisions/reviews
+  // restent intacts (migration future, pas une suppression).
+  return <AuthedApp session={session} onSignOut={() => supabase.auth.signOut()} />;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUTHED APP — toujours monté quand l'utilisateur est connecté.
+// Charge les tickets via useTickets et les distribue aux vues.
+// ═══════════════════════════════════════════════════════════════
+function AuthedApp({ session, onSignOut }) {
+  const [view, setView] = useState("workspace");
+  const [pendingTicketId, setPendingTicketId] = useState(null);
+  const {
+    tickets, loading, error,
+    addTicket, updateTicket, deleteTicket, resetToDefaults,
+    refetch, clearError,
+  } = useTickets();
 
   const openTicket = (id) => {
     setPendingTicketId(id);
     setView("workspace");
   };
 
-  if (session === undefined) {
-    return (
-      <div style={{
-        height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg,
-      }}>
-        <AlfredBowtie size={60} withText />
-      </div>
-    );
+  // Fetch initial en cours OU reset en cours
+  if (tickets === null && loading) {
+    return <FullScreenBowtie />;
   }
 
-  if (session === null) {
-    return <Login />;
+  // Fetch initial échoué (tickets toujours null après loading=false)
+  if (tickets === null && error) {
+    return (
+      <div style={{
+        height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        background: C.bg, padding: 24, textAlign: "center", gap: 18,
+      }}>
+        <AlfredBowtie size={48} withText />
+        <div style={{ color: C.text, fontSize: 16, fontWeight: 700, fontFamily: "'Georgia', serif", marginTop: 12 }}>
+          Impossible de charger les tickets
+        </div>
+        <div style={{ color: C.textMuted, fontSize: 13, maxWidth: 400 }}>{error}</div>
+        <Btn variant="champagne" onClick={refetch}>↻ Réessayer</Btn>
+      </div>
+    );
   }
 
   const userEmail = session.user?.email;
@@ -65,6 +94,13 @@ export default function AlfredWorkspace() {
       clearPendingTicket={() => setPendingTicketId(null)}
       userEmail={userEmail}
       onSignOut={onSignOut}
+      tickets={tickets}
+      addTicket={addTicket}
+      updateTicket={updateTicket}
+      deleteTicket={deleteTicket}
+      resetToDefaults={resetToDefaults}
+      error={error}
+      clearError={clearError}
     />
   ) : (
     <Results
@@ -73,6 +109,17 @@ export default function AlfredWorkspace() {
       openTicket={openTicket}
       userEmail={userEmail}
       onSignOut={onSignOut}
+      tickets={tickets}
+      error={error}
+      clearError={clearError}
     />
   );
 }
+
+const FullScreenBowtie = () => (
+  <div style={{
+    height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg,
+  }}>
+    <AlfredBowtie size={60} withText />
+  </div>
+);
