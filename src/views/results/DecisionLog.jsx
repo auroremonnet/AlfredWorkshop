@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { C, PHASES, inputStyle, lblStyle, todayISO, formatDateLong } from "../../constants.js";
-import { usePersistedState } from "../../hooks/usePersistedState.js";
 import { Btn } from "../../components/ui.jsx";
 
 const EMPTY = {
@@ -136,35 +135,53 @@ const Field = ({ label, value, accent = C.textMuted }) => (
 
 // ═══════════════════════════════════════════════════════════════
 // DECISION LOG — section principale
+//
+// Reçoit decisions + handlers en props depuis le shell (qui les sert
+// via useDecisions + Supabase). decisions === null → mini-loader.
 // ═══════════════════════════════════════════════════════════════
-export default function DecisionLog({ tickets, openTicket }) {
-  const [decisions, setDecisions] = usePersistedState("alfred-decisions-v1", []);
+export default function DecisionLog({
+  tickets, openTicket,
+  decisions, addDecision, updateDecision, deleteDecision,
+}) {
   const [editing, setEditing] = useState(null);
 
-  const sorted = [...decisions].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-
   const saveDecision = (d) => {
-    if (!d.id) {
-      setDecisions((prev) => [...prev, { ...d, id: `dec-${Date.now()}` }]);
-    } else {
-      setDecisions((prev) => prev.map((x) => (x.id === d.id ? d : x)));
-    }
+    if (!d.id) addDecision(d);
+    else updateDecision(d);
   };
 
-  const deleteDecision = (id) => {
-    if (confirm("Supprimer cette décision ?")) {
-      setDecisions((prev) => prev.filter((d) => d.id !== id));
-    }
+  const handleDelete = (id) => {
+    if (confirm("Supprimer cette décision ?")) deleteDecision(id);
   };
+
+  const sectionHeader = (count) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+      <h2 style={{ color: C.encre, fontSize: 18, fontWeight: 700, fontFamily: "'Georgia', serif", margin: 0 }}>📜 Journal de décisions</h2>
+      {typeof count === "number" && <span style={{ color: C.textDim, fontSize: 12 }}>{count}</span>}
+      <div style={{ flex: 1 }} />
+      <Btn variant="champagne" size="sm" disabled={decisions === null} onClick={() => setEditing({ ...EMPTY, date: todayISO() })}>+ Nouvelle décision</Btn>
+    </div>
+  );
+
+  if (decisions === null) {
+    return (
+      <section style={{ marginBottom: 32 }}>
+        {sectionHeader()}
+        <div style={{ textAlign: "center", padding: 40, color: C.textDim, background: C.bgPanel, border: `1px solid ${C.borderSubtle}`, borderRadius: 8, fontStyle: "italic" }}>
+          Chargement des décisions…
+        </div>
+      </section>
+    );
+  }
+
+  // Le hook trie déjà par date desc côté Supabase, mais on re-trie ici
+  // pour rester robuste si jamais l'ordre des décisions est modifié
+  // localement (par ex. après un add optimiste).
+  const sorted = [...decisions].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
   return (
     <section style={{ marginBottom: 32 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-        <h2 style={{ color: C.encre, fontSize: 18, fontWeight: 700, fontFamily: "'Georgia', serif", margin: 0 }}>📜 Journal de décisions</h2>
-        <span style={{ color: C.textDim, fontSize: 12 }}>{decisions.length}</span>
-        <div style={{ flex: 1 }} />
-        <Btn variant="champagne" size="sm" onClick={() => setEditing({ ...EMPTY, date: todayISO() })}>+ Nouvelle décision</Btn>
-      </div>
+      {sectionHeader(decisions.length)}
 
       {sorted.length === 0 ? (
         <div style={{ textAlign: "center", padding: 40, color: C.textDim, background: C.bgPanel, border: `1px solid ${C.borderSubtle}`, borderRadius: 8 }}>
@@ -176,7 +193,7 @@ export default function DecisionLog({ tickets, openTicket }) {
             key={d.id}
             decision={d}
             onEdit={() => setEditing(d)}
-            onDelete={() => deleteDecision(d.id)}
+            onDelete={() => handleDelete(d.id)}
             openTicket={openTicket}
           />
         ))

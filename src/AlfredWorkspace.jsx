@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { C } from "./constants.js";
 import { supabase } from "./lib/supabase.js";
 import { useTickets } from "./hooks/useTickets.js";
+import { useKpis } from "./hooks/useKpis.js";
+import { useDecisions } from "./hooks/useDecisions.js";
+import { useReviews } from "./hooks/useReviews.js";
 import { AlfredBowtie, Btn } from "./components/ui.jsx";
 import Login from "./components/Login.jsx";
 import Workspace from "./views/Workspace.jsx";
@@ -12,7 +15,7 @@ import Results from "./views/results/Results.jsx";
 //
 // session === undefined : on charge la session initiale
 // session === null      : pas connecté → écran de login
-// session truthy        : connecté → <AuthedApp /> qui charge les tickets
+// session truthy        : connecté → <AuthedApp /> qui charge les données
 // ═══════════════════════════════════════════════════════════════
 export default function AlfredWorkspace() {
   const [session, setSession] = useState(undefined);
@@ -39,36 +42,38 @@ export default function AlfredWorkspace() {
     return <Login />;
   }
 
-  // signOut ne touche PAS au localStorage : KPIs/décisions/reviews
-  // restent intacts (migration future, pas une suppression).
   return <AuthedApp session={session} onSignOut={() => supabase.auth.signOut()} />;
 }
 
 // ═══════════════════════════════════════════════════════════════
 // AUTHED APP — toujours monté quand l'utilisateur est connecté.
-// Charge les tickets via useTickets et les distribue aux vues.
+// Charge tickets + KPIs via leurs hooks Supabase et les distribue.
 // ═══════════════════════════════════════════════════════════════
 function AuthedApp({ session, onSignOut }) {
   const [view, setView] = useState("workspace");
   const [pendingTicketId, setPendingTicketId] = useState(null);
-  const {
-    tickets, loading, error,
-    addTicket, updateTicket, deleteTicket, resetToDefaults,
-    refetch, clearError,
-  } = useTickets();
+
+  // Tickets : source unique de vérité, partagée entre Workspace et Results.
+  const ticketsHook = useTickets();
+
+  // KPIs / décisions / reviews : ne bloquent pas l'affichage initial.
+  // Chaque section affiche son propre mini-loader pendant le fetch
+  // initial et l'app reste utilisable autour.
+  const kpisHook = useKpis();
+  const decisionsHook = useDecisions(ticketsHook.tickets);
+  const reviewsHook = useReviews();
 
   const openTicket = (id) => {
     setPendingTicketId(id);
     setView("workspace");
   };
 
-  // Fetch initial en cours OU reset en cours
-  if (tickets === null && loading) {
+  // Bloquant : on attend les tickets pour afficher quoi que ce soit
+  // (la majorité de l'app dépend d'eux).
+  if (ticketsHook.tickets === null && ticketsHook.loading) {
     return <FullScreenBowtie />;
   }
-
-  // Fetch initial échoué (tickets toujours null après loading=false)
-  if (tickets === null && error) {
+  if (ticketsHook.tickets === null && ticketsHook.error) {
     return (
       <div style={{
         height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
@@ -78,13 +83,23 @@ function AuthedApp({ session, onSignOut }) {
         <div style={{ color: C.text, fontSize: 16, fontWeight: 700, fontFamily: "'Georgia', serif", marginTop: 12 }}>
           Impossible de charger les tickets
         </div>
-        <div style={{ color: C.textMuted, fontSize: 13, maxWidth: 400 }}>{error}</div>
-        <Btn variant="champagne" onClick={refetch}>↻ Réessayer</Btn>
+        <div style={{ color: C.textMuted, fontSize: 13, maxWidth: 400 }}>{ticketsHook.error}</div>
+        <Btn variant="champagne" onClick={ticketsHook.refetch}>↻ Réessayer</Btn>
       </div>
     );
   }
 
   const userEmail = session.user?.email;
+
+  // Erreur Results = première erreur non-null parmi les 3 hooks Results.
+  // clearResultsError clear toutes les sources (l'utilisateur ne voit
+  // qu'un bandeau à la fois, donc on clear tout pour être safe).
+  const resultsError = kpisHook.error || decisionsHook.error || reviewsHook.error;
+  const clearResultsError = () => {
+    kpisHook.clearError();
+    decisionsHook.clearError();
+    reviewsHook.clearError();
+  };
 
   return view === "workspace" ? (
     <Workspace
@@ -94,13 +109,13 @@ function AuthedApp({ session, onSignOut }) {
       clearPendingTicket={() => setPendingTicketId(null)}
       userEmail={userEmail}
       onSignOut={onSignOut}
-      tickets={tickets}
-      addTicket={addTicket}
-      updateTicket={updateTicket}
-      deleteTicket={deleteTicket}
-      resetToDefaults={resetToDefaults}
-      error={error}
-      clearError={clearError}
+      tickets={ticketsHook.tickets}
+      addTicket={ticketsHook.addTicket}
+      updateTicket={ticketsHook.updateTicket}
+      deleteTicket={ticketsHook.deleteTicket}
+      resetToDefaults={ticketsHook.resetToDefaults}
+      error={ticketsHook.error}
+      clearError={ticketsHook.clearError}
     />
   ) : (
     <Results
@@ -109,9 +124,21 @@ function AuthedApp({ session, onSignOut }) {
       openTicket={openTicket}
       userEmail={userEmail}
       onSignOut={onSignOut}
-      tickets={tickets}
-      error={error}
-      clearError={clearError}
+      tickets={ticketsHook.tickets}
+      kpis={kpisHook.kpis}
+      addKpi={kpisHook.addKpi}
+      updateKpi={kpisHook.updateKpi}
+      deleteKpi={kpisHook.deleteKpi}
+      decisions={decisionsHook.decisions}
+      addDecision={decisionsHook.addDecision}
+      updateDecision={decisionsHook.updateDecision}
+      deleteDecision={decisionsHook.deleteDecision}
+      reviews={reviewsHook.reviews}
+      addReview={reviewsHook.addReview}
+      updateReview={reviewsHook.updateReview}
+      deleteReview={reviewsHook.deleteReview}
+      error={resultsError}
+      clearError={clearResultsError}
     />
   );
 }

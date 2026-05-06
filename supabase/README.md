@@ -8,7 +8,13 @@ base Supabase d'Alfred Workspace.
 | Fichier | Rôle |
 |---|---|
 | `seed-tickets.sql` | 159 INSERTs pour initialiser la table `public.tickets` à partir de `DEFAULT_TICKETS` (`src/constants.js`). |
+| `seed-kpis.sql` | 5 INSERTs pour initialiser la table `public.kpis` avec les KPIs business par défaut (Entretiens/sem, Waitlist, Beta-testeurs, MRR, Churn). |
 | `generate-seed.mjs` | Script Node qui régénère `seed-tickets.sql` à partir de `src/constants.js`. À relancer si on modifie les tickets par défaut. |
+
+## Initialiser la table kpis — UNE SEULE FOIS
+
+Copier-coller [`seed-kpis.sql`](./seed-kpis.sql) dans le SQL Editor.
+5 KPIs créés à valeur 0 (à mettre à jour ensuite via l'UI).
 
 ## Initialiser la table tickets — UNE SEULE FOIS
 

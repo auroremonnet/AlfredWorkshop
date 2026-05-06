@@ -47,10 +47,16 @@ ASSIGNEE_FROM_DB[null] = "unassigned";
 
 // ═══════════════════════════════════════════════════════════════
 // fromDb(row) — Supabase row → ticket app-shape
+//
+// Note : on expose aussi `dbId` (UUID PK de la row tickets), utilisé
+// par useDecisions pour résoudre les FK ticket_id (côté décisions)
+// sans roundtrip supplémentaire. Le reste du code applicatif ignore
+// ce champ et continue d'utiliser `id` (le ticket_code "T001").
 // ═══════════════════════════════════════════════════════════════
 export function fromDb(row) {
   return {
     id: row.ticket_code,
+    dbId: row.id,
     title: row.title,
     desc: row.description ?? "",
     status: STATUS_FROM_DB[row.status] ?? "todo",

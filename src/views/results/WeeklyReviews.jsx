@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { C, inputStyle, lblStyle, todayISO, mondayOf, formatDateLong } from "../../constants.js";
-import { usePersistedState } from "../../hooks/usePersistedState.js";
 import { Btn } from "../../components/ui.jsx";
 
 const EMPTY = { id: null, weekOf: "", progress: "", blockers: "", nextPriorities: "" };
@@ -90,35 +89,49 @@ const Section = ({ title, value, accent }) => (
 
 // ═══════════════════════════════════════════════════════════════
 // WEEKLY REVIEWS — section principale
+//
+// Reçoit reviews + handlers en props depuis le shell (qui les sert
+// via useReviews + Supabase). reviews === null → mini-loader.
 // ═══════════════════════════════════════════════════════════════
-export default function WeeklyReviews() {
-  const [reviews, setReviews] = usePersistedState("alfred-reviews-v1", []);
+export default function WeeklyReviews({ reviews, addReview, updateReview, deleteReview }) {
   const [editing, setEditing] = useState(null);
 
-  const sorted = [...reviews].sort((a, b) => (b.weekOf || "").localeCompare(a.weekOf || ""));
-
   const saveReview = (r) => {
-    if (!r.id) {
-      setReviews((prev) => [...prev, { ...r, id: `wr-${Date.now()}` }]);
-    } else {
-      setReviews((prev) => prev.map((x) => (x.id === r.id ? r : x)));
-    }
+    if (!r.id) addReview(r);
+    else updateReview(r);
   };
 
-  const deleteReview = (id) => {
-    if (confirm("Supprimer cette weekly review ?")) {
-      setReviews((prev) => prev.filter((r) => r.id !== id));
-    }
+  const handleDelete = (id) => {
+    if (confirm("Supprimer cette weekly review ?")) deleteReview(id);
   };
+
+  const sectionHeader = (count) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+      <h2 style={{ color: C.encre, fontSize: 18, fontWeight: 700, fontFamily: "'Georgia', serif", margin: 0 }}>🗓 Weekly reviews</h2>
+      {typeof count === "number" && <span style={{ color: C.textDim, fontSize: 12 }}>{count}</span>}
+      <div style={{ flex: 1 }} />
+      <Btn variant="champagne" size="sm" disabled={reviews === null} onClick={() => setEditing({ ...EMPTY, weekOf: mondayOf(todayISO()) })}>+ Nouvelle review</Btn>
+    </div>
+  );
+
+  if (reviews === null) {
+    return (
+      <section style={{ marginBottom: 32 }}>
+        {sectionHeader()}
+        <div style={{ textAlign: "center", padding: 40, color: C.textDim, background: C.bgPanel, border: `1px solid ${C.borderSubtle}`, borderRadius: 8, fontStyle: "italic" }}>
+          Chargement des reviews…
+        </div>
+      </section>
+    );
+  }
+
+  // Le hook trie déjà par week_of desc côté Supabase ; on re-trie
+  // localement pour rester robuste après les mutations optimistes.
+  const sorted = [...reviews].sort((a, b) => (b.weekOf || "").localeCompare(a.weekOf || ""));
 
   return (
     <section style={{ marginBottom: 32 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-        <h2 style={{ color: C.encre, fontSize: 18, fontWeight: 700, fontFamily: "'Georgia', serif", margin: 0 }}>🗓 Weekly reviews</h2>
-        <span style={{ color: C.textDim, fontSize: 12 }}>{reviews.length}</span>
-        <div style={{ flex: 1 }} />
-        <Btn variant="champagne" size="sm" onClick={() => setEditing({ ...EMPTY, weekOf: mondayOf(todayISO()) })}>+ Nouvelle review</Btn>
-      </div>
+      {sectionHeader(reviews.length)}
 
       {sorted.length === 0 ? (
         <div style={{ textAlign: "center", padding: 40, color: C.textDim, background: C.bgPanel, border: `1px solid ${C.borderSubtle}`, borderRadius: 8 }}>
@@ -126,7 +139,7 @@ export default function WeeklyReviews() {
         </div>
       ) : (
         sorted.map((r) => (
-          <ReviewCard key={r.id} review={r} onEdit={() => setEditing(r)} onDelete={() => deleteReview(r.id)} />
+          <ReviewCard key={r.id} review={r} onEdit={() => setEditing(r)} onDelete={() => handleDelete(r.id)} />
         ))
       )}
 

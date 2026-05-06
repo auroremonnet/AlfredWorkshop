@@ -1,18 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, inputStyle, lblStyle, todayISO, formatDateShort } from "../../constants.js";
-import { usePersistedState } from "../../hooks/usePersistedState.js";
 import { Btn } from "../../components/ui.jsx";
-
-// ═══════════════════════════════════════════════════════════════
-// SEED — 5 KPIs business par défaut, valeur 0, history vide
-// ═══════════════════════════════════════════════════════════════
-const SEED_KPIS = [
-  { id: "kpi-seed-1", name: "Entretiens utilisateurs / semaine", unit: "interviews", value: 0, history: [] },
-  { id: "kpi-seed-2", name: "Inscriptions waitlist", unit: "personnes", value: 0, history: [] },
-  { id: "kpi-seed-3", name: "Beta-testeurs recrutés", unit: "personnes", value: 0, history: [] },
-  { id: "kpi-seed-4", name: "MRR", unit: "€", value: 0, history: [] },
-  { id: "kpi-seed-5", name: "Churn", unit: "%", value: 0, history: [] },
-];
 
 // ═══════════════════════════════════════════════════════════════
 // SPARKLINE — SVG inline minimaliste, sans dépendance
@@ -133,39 +121,49 @@ const KpiCard = ({ kpi, onEdit, onDelete }) => {
 
 // ═══════════════════════════════════════════════════════════════
 // KPI BOARD — section principale
+//
+// Reçoit kpis + handlers en props depuis le shell (qui les sert
+// via useKpis + Supabase). kpis === null → mini-loader (le fetch
+// initial n'a pas encore complété).
 // ═══════════════════════════════════════════════════════════════
-export default function KpiBoard() {
-  const [kpis, setKpis] = usePersistedState("alfred-kpis-v1", SEED_KPIS);
+export default function KpiBoard({ kpis, addKpi, updateKpi, deleteKpi }) {
   const [editing, setEditing] = useState(null);
 
   const saveKpi = (k) => {
-    if (!k.id) {
-      const newK = { ...k, id: `kpi-${Date.now()}`, history: [] };
-      setKpis((prev) => [...prev, newK]);
-      return;
-    }
-    setKpis((prev) => prev.map((x) => {
-      if (x.id !== k.id) return x;
-      const valueChanged = x.value !== k.value;
-      const newHistory = valueChanged ? [...x.history, { date: todayISO(), value: x.value }] : x.history;
-      return { ...k, history: newHistory };
-    }));
+    if (!k.id) addKpi(k);
+    else updateKpi(k);
   };
 
-  const deleteKpi = (id) => {
-    if (confirm("Supprimer ce KPI et son historique ?")) {
-      setKpis((prev) => prev.filter((k) => k.id !== id));
-    }
+  const handleDelete = (id) => {
+    if (confirm("Supprimer ce KPI et son historique ?")) deleteKpi(id);
   };
+
+  const sectionHeader = (count) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+      <h2 style={{ color: C.encre, fontSize: 18, fontWeight: 700, fontFamily: "'Georgia', serif", margin: 0 }}>📊 Indicateurs business</h2>
+      {typeof count === "number" && (
+        <span style={{ color: C.textDim, fontSize: 12 }}>{count} KPI{count > 1 ? "s" : ""}</span>
+      )}
+      <div style={{ flex: 1 }} />
+      <Btn variant="champagne" size="sm" disabled={kpis === null} onClick={() => setEditing({ name: "", unit: "", value: 0 })}>+ KPI</Btn>
+    </div>
+  );
+
+  // Fetch initial en cours
+  if (kpis === null) {
+    return (
+      <section style={{ marginBottom: 32 }}>
+        {sectionHeader()}
+        <div style={{ textAlign: "center", padding: 40, color: C.textDim, background: C.bgPanel, border: `1px solid ${C.borderSubtle}`, borderRadius: 8, fontStyle: "italic" }}>
+          Chargement des KPIs…
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section style={{ marginBottom: 32 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-        <h2 style={{ color: C.encre, fontSize: 18, fontWeight: 700, fontFamily: "'Georgia', serif", margin: 0 }}>📊 Indicateurs business</h2>
-        <span style={{ color: C.textDim, fontSize: 12 }}>{kpis.length} KPI{kpis.length > 1 ? "s" : ""}</span>
-        <div style={{ flex: 1 }} />
-        <Btn variant="champagne" size="sm" onClick={() => setEditing({ name: "", unit: "", value: 0 })}>+ KPI</Btn>
-      </div>
+      {sectionHeader(kpis.length)}
 
       {kpis.length === 0 ? (
         <div style={{ textAlign: "center", padding: 40, color: C.textDim, background: C.bgPanel, border: `1px solid ${C.borderSubtle}`, borderRadius: 8 }}>
@@ -174,7 +172,7 @@ export default function KpiBoard() {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
           {kpis.map((k) => (
-            <KpiCard key={k.id} kpi={k} onEdit={() => setEditing(k)} onDelete={() => deleteKpi(k.id)} />
+            <KpiCard key={k.id} kpi={k} onEdit={() => setEditing(k)} onDelete={() => handleDelete(k.id)} />
           ))}
         </div>
       )}
