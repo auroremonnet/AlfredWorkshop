@@ -1,15 +1,20 @@
 import { C } from "../constants.js";
-import { AlfredBowtie } from "./ui.jsx";
+import { AlfredBowtie, Btn } from "./ui.jsx";
 
 // ═══════════════════════════════════════════════════════════════
-// HEADER — logo + titre + onglets de nav + slot d'actions
+// HEADER — logo + titre + onglets de nav + bouton session + slot d'actions
 // ═══════════════════════════════════════════════════════════════
 const VIEWS = [
   { id: "workspace", label: "Workspace", icon: "📋" },
   { id: "results",   label: "Résultats", icon: "📊" },
 ];
 
-export const Header = ({ view, setView, title, subtitle, children }) => {
+const truncateEmail = (email, max = 24) => {
+  if (!email) return "";
+  return email.length > max ? email.slice(0, max - 1) + "…" : email;
+};
+
+export const Header = ({ view, setView, title, subtitle, userEmail, onSignOut, children }) => {
   return (
     <header style={{
       borderBottom: `1px solid ${C.border}`, background: `${C.bgPanel}F0`, backdropFilter: "blur(12px)",
@@ -32,6 +37,12 @@ export const Header = ({ view, setView, title, subtitle, children }) => {
           }}>{v.icon} {v.label}</button>
         ))}
       </div>
+
+      {userEmail && onSignOut && (
+        <Btn variant="ghost" size="sm" onClick={onSignOut} title={`Se déconnecter (${userEmail})`}>
+          ↪ {truncateEmail(userEmail)}
+        </Btn>
+      )}
 
       <div style={{ flex: 1, minWidth: 20 }} />
       {children}

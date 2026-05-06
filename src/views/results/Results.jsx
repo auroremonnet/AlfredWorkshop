@@ -21,7 +21,7 @@ const readTickets = () => {
 // ═══════════════════════════════════════════════════════════════
 // RESULTS — onglet "Résultats" (KPIs · Décisions · Weekly reviews)
 // ═══════════════════════════════════════════════════════════════
-export default function Results({ view, setView, openTicket }) {
+export default function Results({ view, setView, openTicket, userEmail, onSignOut }) {
   const [tickets] = useState(readTickets);
 
   return (
@@ -29,7 +29,14 @@ export default function Results({ view, setView, openTicket }) {
       minHeight: "100vh", background: C.bg, color: C.text,
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     }}>
-      <Header view={view} setView={setView} title="Mesure des résultats" subtitle="KPIs · Décisions · Weekly reviews" />
+      <Header
+        view={view}
+        setView={setView}
+        title="Mesure des résultats"
+        subtitle="KPIs · Décisions · Weekly reviews"
+        userEmail={userEmail}
+        onSignOut={onSignOut}
+      />
 
       <div style={{ padding: "20px 28px", maxWidth: 1400, margin: "0 auto" }}>
         <KpiBoard />
