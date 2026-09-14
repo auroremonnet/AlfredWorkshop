@@ -39,6 +39,7 @@ export const ASSIGNEE_TO_DB = {
   greg: "Greg",
   hippo: "Hippo",
   aurore: "Aurore",
+  maxence: "Maxence",
   unassigned: null, // NULL en DB (la colonne assignee est nullable)
 };
 const ASSIGNEE_FROM_DB = invert(ASSIGNEE_TO_DB);
@@ -66,6 +67,8 @@ export function fromDb(row) {
     assignee: row.assignee === null ? "unassigned" : (ASSIGNEE_FROM_DB[row.assignee] ?? "unassigned"),
     notes: row.notes ?? "",
     deps: row.deps ?? "",
+    sprintId: row.sprint_id ?? null,
+    doneAt: row.done_at ?? null, // lecture seule (posé par trigger SQL)
   };
 }
 
@@ -73,7 +76,7 @@ export function fromDb(row) {
 // toDb(ticket) — ticket app-shape → payload Supabase (INSERT/UPDATE)
 //
 // Sortie : ticket_code + tous les champs éditables. On exclut
-// volontairement id (uuid auto), created_at, updated_at, updated_by.
+// volontairement id (uuid auto), created_at, updated_at, updated_by, done_at.
 // ═══════════════════════════════════════════════════════════════
 export function toDb(t) {
   return {
@@ -87,6 +90,8 @@ export function toDb(t) {
     assignee: ASSIGNEE_TO_DB[t.assignee] ?? null,
     notes: t.notes ?? "",
     deps: t.deps ?? "",
+    sprint_id: t.sprintId ?? null,
+    // done_at volontairement exclu : géré par le trigger tickets_done_at
   };
 }
 

@@ -1,5 +1,6 @@
 import { C } from "../../constants.js";
 import { Header } from "../../components/Header.jsx";
+import { ErrorBanner } from "../../components/ui.jsx";
 import KpiBoard from "./KpiBoard.jsx";
 import DecisionLog from "./DecisionLog.jsx";
 import WeeklyReviews from "./WeeklyReviews.jsx";
@@ -11,7 +12,7 @@ import WeeklyReviews from "./WeeklyReviews.jsx";
 // vérité, fetched via useTickets) → données toujours fraîches.
 // ═══════════════════════════════════════════════════════════════
 export default function Results({
-  view, setView, openTicket, userEmail, onSignOut,
+  nav, openTicket,
   tickets, error, clearError,
   kpis, addKpi, updateKpi, deleteKpi,
   decisions, addDecision, updateDecision, deleteDecision,
@@ -22,14 +23,7 @@ export default function Results({
       minHeight: "100vh", background: C.bg, color: C.text,
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     }}>
-      <Header
-        view={view}
-        setView={setView}
-        title="Mesure des résultats"
-        subtitle="KPIs · Décisions · Weekly reviews"
-        userEmail={userEmail}
-        onSignOut={onSignOut}
-      />
+      <Header {...nav} title="Mesure des résultats" subtitle="KPIs · Décisions · Weekly reviews" />
 
       <ErrorBanner error={error} onDismiss={clearError} />
 
@@ -50,28 +44,6 @@ export default function Results({
           deleteReview={deleteReview}
         />
       </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// ERROR BANNER — sticky, dismissible (cohérent avec Workspace)
-// ═══════════════════════════════════════════════════════════════
-function ErrorBanner({ error, onDismiss }) {
-  if (!error) return null;
-  return (
-    <div style={{
-      position: "sticky", top: 64, zIndex: 49,
-      padding: "10px 28px", background: "rgba(199,62,71,0.08)",
-      borderBottom: "1px solid rgba(199,62,71,0.3)", color: "#C73E47",
-      display: "flex", alignItems: "center", gap: 12, fontSize: 13, fontWeight: 600,
-    }}>
-      <span>⚠</span>
-      <span style={{ flex: 1 }}>{error}</span>
-      <button onClick={onDismiss} style={{
-        background: "transparent", border: "none", color: "#C73E47",
-        cursor: "pointer", fontSize: 16, padding: "0 6px", fontFamily: "inherit",
-      }}>✕</button>
     </div>
   );
 }

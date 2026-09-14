@@ -36,7 +36,10 @@ export default function Login() {
     setError(null);
     setLoading("magic");
     try {
-      const { error: err } = await supabase.auth.signInWithOtp({ email: email.trim() });
+      const { error: err } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: { emailRedirectTo: window.location.origin },
+      });
       if (err) {
         setError(err.message);
       } else {

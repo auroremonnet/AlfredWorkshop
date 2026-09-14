@@ -1,26 +1,23 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   C, STATUSES, QUADRANTS, TEAM, PHASES, FIB_VALUES, FIB_LABEL,
   selectStyle,
 } from "../constants.js";
-import { Btn, FibBadge, Avatar, StatCard } from "../components/ui.jsx";
+import { Btn, FibBadge, Avatar, StatCard, ErrorBanner } from "../components/ui.jsx";
 import { Header } from "../components/Header.jsx";
-import { TicketModal } from "../components/TicketModal.jsx";
 import { TicketRow } from "../components/TicketRow.jsx";
 import { EisenhowerView } from "../components/EisenhowerView.jsx";
 
 // ═══════════════════════════════════════════════════════════════
-// WORKSPACE — vue tickets (liste + matrice Eisenhower)
+// WORKSPACE / ROADMAP — les 159+ tickets par phase (liste + matrice)
 //
-// Les tickets et leurs mutations viennent en props depuis le shell
-// (qui les sert via useTickets + Supabase).
+// Tickets, sprints et mutations viennent du shell. La fiche ticket est
+// globale : on l'ouvre via onOpenTicket(id).
 // ═══════════════════════════════════════════════════════════════
 export default function Workspace({
-  view, setView, pendingTicketId, clearPendingTicket, userEmail, onSignOut,
-  tickets, addTicket, updateTicket, deleteTicket, resetToDefaults,
+  nav, tickets, sprints = [], onOpenTicket, onQuickAdd, updateTicket, resetToDefaults,
   error, clearError,
 }) {
-  const [editingTicket, setEditingTicket] = useState(null);
   const [filterPhase, setFilterPhase] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterAssignee, setFilterAssignee] = useState("all");
@@ -29,12 +26,7 @@ export default function Workspace({
   const [listView, setListView] = useState("list"); // "list" | "matrix"
   const [exported, setExported] = useState(null);
 
-  useEffect(() => {
-    if (!pendingTicketId) return;
-    const t = tickets.find((x) => x.id === pendingTicketId);
-    if (t) setEditingTicket(t);
-    clearPendingTicket();
-  }, [pendingTicketId, tickets, clearPendingTicket]);
+  const sprintById = useMemo(() => Object.fromEntries(sprints.map((s) => [s.id, s])), [sprints]);
 
   const filtered = useMemo(() => {
     return tickets.filter((t) => {
@@ -55,29 +47,24 @@ export default function Workspace({
     return { total: tickets.length, byStatus, byAssignee, totalFib, doneFib, progress: totalFib ? Math.round((doneFib / totalFib) * 100) : 0 };
   }, [tickets]);
 
-  const saveTicket = (t) => updateTicket(t);
   const cycleStatus = (t) => {
     const idx = STATUSES.findIndex((s) => s.id === t.status);
     const next = STATUSES[(idx + 1) % STATUSES.length];
     updateTicket({ ...t, status: next.id });
   };
   const handleAddTicket = () => {
-    const ids = tickets.map((t) => parseInt(t.id.replace(/\D/g, ""))).filter((n) => !isNaN(n));
-    const nextNum = ids.length ? Math.max(...ids) + 1 : 1;
-    const newT = {
-      id: `T${String(nextNum).padStart(3, "0")}`,
+    onQuickAdd({
       phase: filterPhase !== "all" ? filterPhase : "p0",
-      title: "Nouveau ticket", desc: "",
-      fib: 3, status: "todo", deps: "",
       quadrant: filterQuadrant !== "all" ? filterQuadrant : "schedule",
-      assignee: filterAssignee !== "all" ? filterAssignee : "unassigned",
-      notes: "",
-    };
-    addTicket(newT);
-    setEditingTicket(newT);
+      ...(filterAssignee !== "all" ? { assignee: filterAssignee } : {}),
+    });
   };
   const handleResetData = () => {
-    if (confirm("Réinitialiser tous les tickets aux valeurs par défaut ?")) resetToDefaults();
+    const answer = prompt(
+      "⚠ Ça supprime TOUS les tickets de l'équipe (statuts, notes, commentaires, rattachements aux sprints) " +
+      "et remet les 159 tickets d'origine.\n\nTape RESET pour confirmer."
+    );
+    if (answer === "RESET") resetToDefaults();
   };
 
   const exportMarkdown = () => {
@@ -95,13 +82,14 @@ export default function Workspace({
       const ph = tickets.filter((t) => t.phase === phase.id);
       if (!ph.length) return;
       md += `\n### ${phase.label}\n*${phase.period}*\n\n`;
-      md += `| ID | Titre | Assigné | Quadrant | Statut | Fib | Description |\n|---|---|---|---|---|---|---|\n`;
+      md += `| ID | Titre | Assigné | Sprint | Quadrant | Statut | Fib | Description |\n|---|---|---|---|---|---|---|---|\n`;
       ph.forEach((t) => {
         const status = STATUSES.find((s) => s.id === t.status)?.label || "—";
         const member = TEAM.find((m) => m.id === t.assignee)?.name || "—";
         const quad = QUADRANTS.find((q) => q.id === t.quadrant)?.short || "—";
         const desc = (t.desc || "—").replace(/\n/g, " ").replace(/\|/g, "\\|");
-        md += `| ${t.id} | **${t.title}** | ${member} | ${quad} | ${status} | ${t.fib} | ${desc} |\n`;
+        const sprint = sprintById[t.sprintId]?.name || "Backlog";
+        md += `| ${t.id} | **${t.title}** | ${member} | ${sprint} | ${quad} | ${status} | ${t.fib} | ${desc} |\n`;
       });
     });
     setExported(md);
@@ -113,14 +101,7 @@ export default function Workspace({
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     }}>
       {/* ═══ HEADER ═══ */}
-      <Header
-        view={view}
-        setView={setView}
-        title="Roadmap Tickets"
-        subtitle="Workspace stratégique"
-        userEmail={userEmail}
-        onSignOut={onSignOut}
-      >
+      <Header {...nav} title="Roadmap Tickets" subtitle="Toutes les phases, P0 → P11">
         <Btn variant="secondary" size="sm" onClick={exportMarkdown}>📄 Export</Btn>
         <Btn variant="ghost" size="sm" onClick={handleResetData}>↻ Reset</Btn>
         <Btn variant="champagne" size="sm" onClick={handleAddTicket}>+ Nouveau ticket</Btn>
@@ -214,7 +195,7 @@ export default function Workspace({
 
         {/* ═══ MAIN VIEW ═══ */}
         {listView === "matrix" ? (
-          <EisenhowerView tickets={filtered} onTicketClick={setEditingTicket} />
+          <EisenhowerView tickets={filtered} onTicketClick={(t) => onOpenTicket(t.id)} />
         ) : (
           <>
             {filterPhase !== "all" && (() => {
@@ -239,7 +220,7 @@ export default function Workspace({
                 </div>
               ) : (
                 filtered.map((t) => (
-                  <TicketRow key={t.id} t={t} onClick={() => setEditingTicket(t)} onStatusCycle={cycleStatus} />
+                  <TicketRow key={t.id} t={t} sprint={sprintById[t.sprintId]} onClick={() => onOpenTicket(t.id)} onStatusCycle={cycleStatus} />
                 ))
               )}
             </div>
@@ -263,11 +244,6 @@ export default function Workspace({
           Modifications <strong style={{ color: C.champagneDeep }}>sauvegardées automatiquement</strong> • Clique sur un ticket pour l'éditer • Clique sur le statut pour le faire avancer • Bouton Export pour Notion
         </div>
       </div>
-
-      {/* ═══ EDIT MODAL ═══ */}
-      {editingTicket && (
-        <TicketModal ticket={editingTicket} onClose={() => setEditingTicket(null)} onSave={saveTicket} onDelete={deleteTicket} />
-      )}
 
       {/* ═══ EXPORT MODAL ═══ */}
       {exported && (
@@ -295,28 +271,6 @@ export default function Workspace({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// ERROR BANNER — sticky en haut de page, dismissible
-// ═══════════════════════════════════════════════════════════════
-function ErrorBanner({ error, onDismiss }) {
-  if (!error) return null;
-  return (
-    <div style={{
-      position: "sticky", top: 64, zIndex: 49,
-      padding: "10px 28px", background: "rgba(199,62,71,0.08)",
-      borderBottom: "1px solid rgba(199,62,71,0.3)", color: "#C73E47",
-      display: "flex", alignItems: "center", gap: 12, fontSize: 13, fontWeight: 600,
-    }}>
-      <span>⚠</span>
-      <span style={{ flex: 1 }}>{error}</span>
-      <button onClick={onDismiss} style={{
-        background: "transparent", border: "none", color: "#C73E47",
-        cursor: "pointer", fontSize: 16, padding: "0 6px", fontFamily: "inherit",
-      }}>✕</button>
     </div>
   );
 }
