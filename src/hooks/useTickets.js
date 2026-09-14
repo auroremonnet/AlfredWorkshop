@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabase.js";
 import { fromDb, toDb } from "../lib/ticketMapping.js";
+import { humanize } from "../lib/dbErrors.js";
 import { DEFAULT_TICKETS } from "../constants.js";
 
 // ═══════════════════════════════════════════════════════════════
@@ -9,45 +10,37 @@ import { DEFAULT_TICKETS } from "../constants.js";
 //
 // Retourne :
 //   { tickets, loading, error,
-//     addTicket, updateTicket, deleteTicket, resetToDefaults,
-//     refetch, clearError }
+//     addTicket, updateTicket, deleteTicket, moveTickets,
+//     resetToDefaults, refetch, silentRefetch, clearError }
 //
-// Le state est mis à jour de façon OPTIMISTE sur les mutations :
-// l'UI est immédiate, et on revert + affiche un message en cas
-// d'erreur DB. Les messages d'erreur exposés à l'utilisateur sont
-// en français ; le détail technique est loggé via console.error.
+// Mutations OPTIMISTES : UI immédiate, revert + message FR si la DB
+// refuse. silentRefetch() est appelé par le realtime / retour d'onglet
+// pour récupérer les changements des autres membres sans loader.
 // ═══════════════════════════════════════════════════════════════
 
-const NETWORK_HINTS = ["Failed to fetch", "NetworkError", "network", "offline"];
-
-const isNetworkError = (e) => {
-  const msg = (e?.message || e?.toString() || "").toLowerCase();
-  return NETWORK_HINTS.some((h) => msg.includes(h.toLowerCase()));
-};
-
 // Filtre WHERE non-vide requis par Supabase pour les DELETE en masse.
-// Cet UUID factice ne matchera jamais une vraie ligne → DELETE full-table.
 const PLACEHOLDER_UUID = "00000000-0000-0000-0000-000000000000";
 
 export function useTickets() {
   const [tickets, setTickets] = useState(null); // null = pas encore fetched
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const ticketsRef = useRef(null);
+  ticketsRef.current = tickets;
 
   const reportError = useCallback((dbErr, fallbackMessage) => {
     console.error("[useTickets]", fallbackMessage, dbErr);
-    setError(isNetworkError(dbErr) ? "Connexion perdue. Vérifie ton réseau." : fallbackMessage);
+    setError(humanize(dbErr, fallbackMessage));
   }, []);
 
-  const fetchTickets = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) { setLoading(true); setError(null); }
     const { data, error: dbErr } = await supabase
       .from("tickets")
       .select("*")
       .order("ticket_code");
     if (dbErr) {
-      reportError(dbErr, "Impossible de charger les tickets. Réessaie.");
+      if (!silent) reportError(dbErr, "Impossible de charger les tickets. Réessaie.");
       setLoading(false);
       return;
     }
@@ -55,49 +48,83 @@ export function useTickets() {
     setLoading(false);
   }, [reportError]);
 
-  useEffect(() => {
-    fetchTickets();
-  }, [fetchTickets]);
+  const fetchTickets = useCallback(() => load(), [load]);
+  const silentRefetch = useCallback(() => load({ silent: true }), [load]);
+
+  useEffect(() => { fetchTickets(); }, [fetchTickets]);
 
   // ─── CRUD avec UI optimiste + revert ───────────────────────────
 
+  // INSERT : on récupère la row créée pour avoir le dbId (UUID),
+  // nécessaire aux commentaires et au journal de décisions.
   const addTicket = useCallback(async (newTicket) => {
-    const previous = tickets;
+    const previous = ticketsRef.current;
     setTickets((prev) => (prev ? [...prev, newTicket] : [newTicket]));
-    const { error: dbErr } = await supabase.from("tickets").insert(toDb(newTicket));
+    const { data: created, error: dbErr } = await supabase
+      .from("tickets")
+      .insert(toDb(newTicket))
+      .select()
+      .single();
     if (dbErr) {
       setTickets(previous);
       reportError(dbErr, "Impossible de créer le ticket. Réessaie.");
+      return null;
     }
-  }, [tickets, reportError]);
+    const saved = fromDb(created);
+    setTickets((prev) => prev.map((t) => (t.id === saved.id ? saved : t)));
+    return saved;
+  }, [reportError]);
 
   const updateTicket = useCallback(async (ticket) => {
-    const previous = tickets;
-    setTickets((prev) => prev.map((t) => (t.id === ticket.id ? ticket : t)));
-    const { error: dbErr } = await supabase
+    const previous = ticketsRef.current;
+    setTickets((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, ...ticket } : t)));
+    const { data: saved, error: dbErr } = await supabase
       .from("tickets")
       .update(toDb(ticket))
-      .eq("ticket_code", ticket.id);
+      .eq("ticket_code", ticket.id)
+      .select()
+      .single();
     if (dbErr) {
       setTickets(previous);
       reportError(dbErr, "Impossible d'enregistrer le ticket. Réessaie.");
+      return;
     }
-  }, [tickets, reportError]);
+    // Récupère done_at (posé par trigger) sans attendre le realtime
+    if (saved) {
+      const fresh = fromDb(saved);
+      setTickets((prev) => prev.map((t) => (t.id === fresh.id ? fresh : t)));
+    }
+  }, [reportError]);
 
   const deleteTicket = useCallback(async (id) => {
-    const previous = tickets;
+    const previous = ticketsRef.current;
     setTickets((prev) => prev.filter((t) => t.id !== id));
     const { error: dbErr } = await supabase.from("tickets").delete().eq("ticket_code", id);
     if (dbErr) {
       setTickets(previous);
       reportError(dbErr, "Impossible de supprimer le ticket. Réessaie.");
     }
-  }, [tickets, reportError]);
+  }, [reportError]);
+
+  // Déplace plusieurs tickets vers un sprint (ou le backlog si null).
+  const moveTickets = useCallback(async (ticketCodes, sprintId) => {
+    if (!ticketCodes.length) return true;
+    const previous = ticketsRef.current;
+    const set = new Set(ticketCodes);
+    setTickets((prev) => prev.map((t) => (set.has(t.id) ? { ...t, sprintId: sprintId ?? null } : t)));
+    const { error: dbErr } = await supabase
+      .from("tickets")
+      .update({ sprint_id: sprintId ?? null })
+      .in("ticket_code", ticketCodes);
+    if (dbErr) {
+      setTickets(previous);
+      reportError(dbErr, "Impossible de déplacer les tickets. Réessaie.");
+      return false;
+    }
+    return true;
+  }, [reportError]);
 
   // Reset : DELETE all + INSERT all DEFAULT_TICKETS.
-  // Pas de transaction client-side (Supabase JS SDK n'en expose pas) — si
-  // l'INSERT échoue après un DELETE réussi, on refetch pour resynchroniser
-  // le state local avec l'état réel (potentiellement vide).
   const resetToDefaults = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -110,18 +137,11 @@ export function useTickets() {
       setLoading(false);
       return;
     }
-    const payload = DEFAULT_TICKETS.map(toDb);
+    const payload = DEFAULT_TICKETS.map((t) => toDb({ ...t, sprintId: null }));
     const { error: insErr } = await supabase.from("tickets").insert(payload);
-    if (insErr) {
-      reportError(insErr, "Réinitialisation incomplète. Vérifie l'état des tickets.");
-      // DELETE a réussi mais INSERT a échoué → DB potentiellement vide.
-      // On refetch pour refléter l'état réel.
-      await fetchTickets();
-      return;
-    }
-    setTickets(DEFAULT_TICKETS.map((t) => ({ ...t, notes: t.notes ?? "" })));
-    setLoading(false);
-  }, [reportError, fetchTickets]);
+    if (insErr) reportError(insErr, "Réinitialisation incomplète. Vérifie l'état des tickets.");
+    await load();
+  }, [reportError, load]);
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -132,8 +152,10 @@ export function useTickets() {
     addTicket,
     updateTicket,
     deleteTicket,
+    moveTickets,
     resetToDefaults,
     refetch: fetchTickets,
+    silentRefetch,
     clearError,
   };
 }

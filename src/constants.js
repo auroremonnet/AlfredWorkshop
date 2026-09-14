@@ -64,12 +64,17 @@ export const QUADRANTS = [
 
 // ═══ ÉQUIPE ═══
 export const TEAM = [
-  { id: "basile", name: "Basile", color: "#0F1B2D", initials: "B" },
-  { id: "greg",   name: "Greg",   color: "#1F6B4A", initials: "G" },
-  { id: "hippo",  name: "Hippo",  color: "#D4A95C", initials: "H" },
-  { id: "aurore", name: "Aurore", color: "#A82E2E", initials: "A" },
-  { id: "unassigned", name: "Non assigné", color: "#8B92A3", initials: "?" },
+  { id: "basile",  name: "Basile",  role: "Stratégie · Fundraising", color: "#0F1B2D", fg: "#F7F3EB", initials: "B" },
+  { id: "greg",    name: "Greg",    role: "Dev · Tech",              color: "#1F6B4A", fg: "#F7F3EB", initials: "G" },
+  { id: "hippo",   name: "Hippo",   role: "Produit · Ops",           color: "#D4A95C", fg: "#0F1B2D", initials: "H" },
+  { id: "aurore",  name: "Aurore",  role: "Marketing · Growth",      color: "#A82E2E", fg: "#F7F3EB", initials: "A" },
+  { id: "maxence", name: "Maxence", role: "Rôle à définir",          color: "#2F5D8A", fg: "#F7F3EB", initials: "M" },
+  { id: "unassigned", name: "Non assigné", role: "", color: "#8B92A3", fg: "#F7F3EB", initials: "?" },
 ];
+
+// Membres réels (sans "Non assigné")
+export const MEMBERS = TEAM.filter((m) => m.id !== "unassigned");
+export const memberById = (id) => TEAM.find((m) => m.id === id) || TEAM[TEAM.length - 1];
 
 export const PHASES = [
   { id: "p0",  label: "Phase 0 — Validation & Recherches",   short: "P0 Validation",  period: "Mois 0-1",  color: "#A855F7" },
@@ -92,7 +97,7 @@ export const PHASES = [
 export const DEFAULT_TICKETS = [
   // === P0 — VALIDATION ===
   { id: "T001", phase: "p0", title: "Définir l'ICP précis et 3 personas détaillés", desc: "Profil démographique, psychographique, comportemental. Inclure : âge, revenu, profession, douleurs, motivations, freins, canaux de découverte. Créer 3 personas distincts (ex: salarié 30 ans, freelance 35 ans, jeune cadre 26 ans).", fib: 3, status: "todo", deps: "", quadrant: "do",       assignee: "unassigned" },
-  { id: "T002", phase: "p0", title: "Mener 15 entretiens utilisateurs ciblés", desc: "Recruter via LinkedIn, Reddit, réseau perso. Script Mom Test : 'Parle-moi de la dernière fois où tu as eu un problème d'argent', 'Comment tu gères tes abonnements ?'. Enregistrer + transcrire. Identifier patterns récurrents.", fib: 5, status: "todo", deps: "T001", quadrant: "do",   assignee: "unassigned" },
+  { id: "T002", phase: "p0", title: "Mener 15 entretiens utilisateurs ciblés", desc: "Recruter via LinkedIn, Reddit, réseau perso. Script Mom Test : 'Parle-moi de la dernière fois où tu as eu un problème d'argent', 'Comment tu gères tes abonnements ?'. Enregistrer + transcrire. Identifier patterns récurrents.", fib: 5, status: "doing", deps: "T001", quadrant: "do",   assignee: "unassigned" },
   { id: "T003", phase: "p0", title: "Sondage en ligne 200+ répondants", desc: "Typeform/Tally. 15 questions max : douleurs financières, WTP, apps utilisées, freins. Diffuser sur Reddit (r/vosfinances), Twitter, Facebook groups. Budget pub Meta 100€ pour booster.", fib: 5, status: "todo", deps: "T001", quadrant: "schedule", assignee: "unassigned" },
   { id: "T004", phase: "p0", title: "Analyse approfondie Bankin' (concurrent #1)", desc: "Télécharger l'app, créer un compte, tester toutes les fonctionnalités. Documenter : tarifs, onboarding, UX, modules, points faibles. Lire 100+ avis App Store/Play Store. Identifier les frustrations récurrentes.", fib: 5, status: "todo", deps: "", quadrant: "do",        assignee: "unassigned" },
   { id: "T005", phase: "p0", title: "Analyse approfondie Lydia/Sumeria", desc: "Test complet, mapping features, lecture reviews. Focus sur leur stratégie de monétisation et leur conflit d'intérêts en tant que néobanque vs Alfred neutre.", fib: 5, status: "todo", deps: "", quadrant: "schedule",                               assignee: "unassigned" },
@@ -110,8 +115,8 @@ export const DEFAULT_TICKETS = [
   { id: "T017", phase: "p0", title: "Élevator pitch + tagline finalisés", desc: "30 secondes max. Doit faire comprendre : qui (ICP), quoi (Alfred fait X), pourquoi unique (vs Y), preuve (économie moyenne). Tester sur 10 personnes hors cible.", fib: 1, status: "todo", deps: "T012", quadrant: "do",                                       assignee: "unassigned" },
 
   // === P1 — LÉGAL ===
-  { id: "T018", phase: "p1", title: "Recherche INPI : disponibilité 'Alfred' (classes 9, 36, 42)", desc: "Vérifier sur la base INPI que 'Alfred' n'est pas déposé en classe 9 (apps), 36 (services financiers), 42 (services techno). Si conflit → trouver alternative. Coût : 0€.", fib: 1, status: "todo", deps: "", quadrant: "do",                       assignee: "unassigned" },
-  { id: "T019", phase: "p1", title: "Réservation domaines (.com, .fr, .app, .io)", desc: "Acheter sur OVH ou Gandi. Budget ~100-300€ selon disponibilité. Si .com pas dispo, alternatives : alfred.fr, alfred.app, getalfred.com, alfred-app.com.", fib: 1, status: "todo", deps: "T018", quadrant: "do",                                          assignee: "unassigned" },
+  { id: "T018", phase: "p1", title: "Recherche INPI : disponibilité 'Alfred' (classes 9, 36, 42)", desc: "Vérifier sur la base INPI que 'Alfred' n'est pas déposé en classe 9 (apps), 36 (services financiers), 42 (services techno). Si conflit → trouver alternative. Coût : 0€.", fib: 1, status: "done", deps: "", quadrant: "do",                       assignee: "unassigned" },
+  { id: "T019", phase: "p1", title: "Réservation domaines (.com, .fr, .app, .io)", desc: "Acheter sur OVH ou Gandi. Budget ~100-300€ selon disponibilité. Si .com pas dispo, alternatives : alfred.fr, alfred.app, getalfred.com, alfred-app.com.", fib: 1, status: "doing", deps: "T018", quadrant: "do",                                          assignee: "unassigned" },
   { id: "T020", phase: "p1", title: "Réservation handles sociaux", desc: "Instagram, TikTok, Twitter/X, LinkedIn, YouTube, Facebook. Tous en @alfred ou @alfredapp ou @getalfred. Cohérence absolue. Faire vite avant qu'un autre les prenne.", fib: 1, status: "todo", deps: "T018", quadrant: "do",                                                  assignee: "unassigned" },
   { id: "T021", phase: "p1", title: "Choix structure juridique : SAS vs SASU", desc: "SAS si 2+ associés, SASU si solo. Consulter expert-comptable (1h gratuite). Avantages SAS : flexibilité, image pro, levée de fonds facile. Coût création ~500-1500€.", fib: 2, status: "todo", deps: "", quadrant: "do",                                       assignee: "unassigned" },
   { id: "T022", phase: "p1", title: "Création de l'entité légale + statuts", desc: "Via LegalStart, Captain Contrat ou notaire. Capital minimum 1€ (recommandé 1000-10000€). Définir parts sociales, dirigeants, siège social. Délai 2-3 semaines.", fib: 3, status: "todo", deps: "T021", quadrant: "do",                                       assignee: "unassigned" },
@@ -166,7 +171,7 @@ export const DEFAULT_TICKETS = [
   { id: "T065", phase: "p4", title: "Backend : Intégration agrégateur DSP2 (Powens/Bridge)", desc: "Onboarding flow : SDK / WebView pour connexion bancaire, callback de validation, stockage tokens chiffrés, refresh consent tous les 90j (DSP2). Gestion erreurs.", fib: 13, status: "todo", deps: "T030,T063", quadrant: "do",                  assignee: "unassigned" },
   { id: "T066", phase: "p4", title: "Backend : Service utilisateurs + profils", desc: "CRUD user, gestion préférences, paramètres notifications, consentements RGPD, suppression compte (droit à l'oubli).", fib: 5, status: "todo", deps: "T064", quadrant: "schedule",                                                                                  assignee: "unassigned" },
   { id: "T067", phase: "p4", title: "Backend : Service transactions (parsing + normalisation)", desc: "Récupération via agrégateur, normalisation merchants (Spotify vs SPOTIFY*123), classification automatique, détection récurrences, enrichissement (logos, types).", fib: 8, status: "todo", deps: "T065", quadrant: "do",                  assignee: "unassigned" },
-  { id: "T068", phase: "p4", title: "Backend : Service détection abonnements (algo ML)", desc: "Algorithme de détection de récurrence : montants similaires, intervalles réguliers, mêmes merchants. ML classifier pour 'abonnement vs paiement ponctuel'. Dataset training : 10k transactions labellisées.", fib: 13, status: "todo", deps: "T067", quadrant: "do", assignee: "unassigned" },
+  { id: "T068", phase: "p4", title: "Backend : Service détection abonnements (moteur de règles MVP)", desc: "Moteur de règles pour le MVP (pas de ML) : montants similaires, intervalles réguliers, même marchand normalisé. Whitelist marchands + fallback de classification via Claude API pour les cas ambigus. Le ML viendra quand on aura un dataset labellisé réel.", fib: 13, status: "todo", deps: "T067", quadrant: "do", assignee: "unassigned" },
   { id: "T069", phase: "p4", title: "Backend : Service détection factures à venir", desc: "Prédiction : sur la base des récurrences passées, prévoir factures EDF, internet, etc. Alerter 5 jours avant. Adaptable selon le pattern utilisateur.", fib: 8, status: "todo", deps: "T067", quadrant: "do",                                          assignee: "unassigned" },
   { id: "T070", phase: "p4", title: "Backend : Service notifications (Firebase FCM + emails)", desc: "Push notifications mobile (Firebase), emails transactionnels (Resend ou SendGrid). Templates customisés. Préférences user respectées.", fib: 5, status: "todo", deps: "T066", quadrant: "schedule",                                          assignee: "unassigned" },
   { id: "T071", phase: "p4", title: "Backend : Intégration Stripe (abonnements)", desc: "Stripe Subscriptions API. Plans Free/Alfred+/Pro. Webhooks pour gérer renouvellements, échecs de paiement, annulations. Période d'essai 14j.", fib: 5, status: "todo", deps: "T064", quadrant: "do",                                                          assignee: "unassigned" },
@@ -293,7 +298,11 @@ export const lblStyle = { color: C.textDim, fontSize: 11, fontWeight: 700, textT
 // ═══════════════════════════════════════════════════════════════
 // HELPERS DATE
 // ═══════════════════════════════════════════════════════════════
-export const todayISO = () => new Date().toISOString().slice(0, 10);
+export const todayISO = () => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 export const formatDateShort = (iso) => {
   if (!iso) return "—";
@@ -309,11 +318,13 @@ export const formatDateLong = (iso) => {
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 };
 
-// Lundi de la semaine d'une date ISO (en local). Default = today.
+// Lundi de la semaine d'une date ISO (en heure locale). Default = today.
+// Formatage local (pas toISOString) pour éviter le décalage UTC la nuit.
 export const mondayOf = (iso) => {
-  const d = iso ? new Date(iso) : new Date();
+  const d = iso ? new Date(`${iso.slice(0, 10)}T12:00:00`) : new Date();
   const day = d.getDay(); // 0 = dimanche, 1 = lundi, …, 6 = samedi
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
-  return d.toISOString().slice(0, 10);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };

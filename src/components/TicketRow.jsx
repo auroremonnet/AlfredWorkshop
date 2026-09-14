@@ -5,7 +5,7 @@ import { Avatar, QuadrantPill, FibBadge, StatusPill } from "./ui.jsx";
 // ═══════════════════════════════════════════════════════════════
 // TICKET ROW
 // ═══════════════════════════════════════════════════════════════
-export const TicketRow = ({ t, onClick, onStatusCycle }) => {
+export const TicketRow = ({ t, sprint, onClick, onStatusCycle }) => {
   const phase = PHASES.find((p) => p.id === t.phase);
   const [hover, setHover] = useState(false);
   return (
@@ -15,7 +15,7 @@ export const TicketRow = ({ t, onClick, onStatusCycle }) => {
       onMouseLeave={() => setHover(false)}
       style={{
         display: "grid",
-        gridTemplateColumns: "55px 95px 1fr auto auto auto auto auto auto",
+        gridTemplateColumns: "55px 95px 1fr auto auto auto auto auto auto auto",
         gap: 12, alignItems: "center", padding: "12px 16px",
         background: hover ? C.bgHover : C.bgCard,
         border: `1px solid ${hover ? C.borderStrong : C.borderSubtle}`,
@@ -38,6 +38,12 @@ export const TicketRow = ({ t, onClick, onStatusCycle }) => {
           </div>
         )}
       </div>
+      <span title={sprint ? `Sprint : ${sprint.name}` : "Au backlog"} style={{
+        fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, whiteSpace: "nowrap",
+        color: sprint?.status === "active" ? C.ivoire : C.textMuted,
+        background: sprint?.status === "active" ? C.emeraude : sprint ? C.ivoireDeep : "transparent",
+        visibility: sprint ? "visible" : "hidden",
+      }}>{sprint ? sprint.name.replace("Sprint ", "") : "—"}</span>
       <Avatar assigneeId={t.assignee} size={28} />
       <span title={t.notes?.trim() ? "A des notes" : ""} style={{
         fontSize: 13, opacity: t.notes?.trim() ? 0.7 : 0,

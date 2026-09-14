@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { C, FIB_COLORS, FIB_LABEL, STATUSES, QUADRANTS, TEAM } from "../constants.js";
+import { useState, useEffect } from "react";
+import { C, FIB_COLORS, FIB_LABEL, STATUSES, QUADRANTS, memberById } from "../constants.js";
 
 // ═══════════════════════════════════════════════════════════════
 // ALFRED LOGO — Bowtie (charte officielle)
@@ -119,21 +119,80 @@ export const QuadrantPill = ({ quadrantId }) => {
   );
 };
 
-export const Avatar = ({ assigneeId, size = 28, showName = false }) => {
-  const m = TEAM.find((t) => t.id === assigneeId) || TEAM[TEAM.length - 1];
+export const Avatar = ({ assigneeId, size = 28, showName = false, ring }) => {
+  const m = memberById(assigneeId);
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-      <div title={m.name} style={{
-        width: size, height: size, borderRadius: "50%",
-        background: m.color, color: m.id === "hippo" ? C.encre : C.ivoire,
+      <div title={m.role ? `${m.name} — ${m.role}` : m.name} style={{
+        width: size, height: size, borderRadius: "50%", flexShrink: 0,
+        background: m.color, color: m.fg || C.ivoire,
         display: "flex", alignItems: "center", justifyContent: "center",
         fontWeight: 700, fontSize: size * 0.42, fontFamily: "'Georgia', serif",
         border: `2px solid ${C.bgPanel}`,
-        boxShadow: `0 0 0 1px ${C.border}`,
+        boxShadow: `0 0 0 ${ring ? 2 : 1}px ${ring || C.border}`,
       }}>
         {m.initials}
       </div>
       {showName && <span style={{ color: C.text, fontSize: 12, fontWeight: 600 }}>{m.name}</span>}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MODAL SHELL — overlay + panneau, fermeture Échap / clic dehors
+// ═══════════════════════════════════════════════════════════════
+export const Modal = ({ onClose, children, maxWidth = 640, z = 100 }) => {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose?.(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, background: "rgba(15,27,45,0.45)", backdropFilter: "blur(8px)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: z, padding: 16,
+    }}>
+      <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" style={{
+        background: C.bgPanel, border: `1px solid ${C.borderStrong}`, borderRadius: 12,
+        width: "100%", maxWidth, maxHeight: "92vh", overflowY: "auto",
+        boxShadow: `0 20px 60px rgba(15,27,45,0.25), 0 0 0 1px ${C.champagne}30`,
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// PROGRESS BAR — points terminés / total
+// ═══════════════════════════════════════════════════════════════
+export const ProgressBar = ({ value, max, color = C.emeraude, height = 6 }) => {
+  const pct = max ? Math.min(100, Math.round((value / max) * 100)) : 0;
+  return (
+    <div style={{ background: C.ivoireDeep, borderRadius: 99, height, overflow: "hidden", width: "100%" }}>
+      <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 99, transition: "width 0.3s ease" }} />
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// ERROR BANNER — sticky, dismissible (partagé par toutes les vues)
+// ═══════════════════════════════════════════════════════════════
+export const ErrorBanner = ({ error, onDismiss }) => {
+  if (!error) return null;
+  return (
+    <div role="alert" style={{
+      position: "sticky", top: 64, zIndex: 49,
+      padding: "10px 28px", background: "rgba(199,62,71,0.08)",
+      borderBottom: "1px solid rgba(199,62,71,0.3)", color: "#C73E47",
+      display: "flex", alignItems: "center", gap: 12, fontSize: 13, fontWeight: 600,
+    }}>
+      <span>⚠</span>
+      <span style={{ flex: 1 }}>{error}</span>
+      <button onClick={onDismiss} aria-label="Fermer" style={{
+        background: "transparent", border: "none", color: "#C73E47",
+        cursor: "pointer", fontSize: 16, padding: "0 6px", fontFamily: "inherit",
+      }}>✕</button>
     </div>
   );
 };
