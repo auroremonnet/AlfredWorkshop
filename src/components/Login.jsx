@@ -85,7 +85,7 @@ export default function Login() {
         boxShadow: `0 20px 60px rgba(15,27,45,0.12), 0 0 0 1px ${C.champagne}30`,
       }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
-          <AlfredBowtie size={48} withText />
+          <AlfredBowtie size={48} withText layout="stack" />
         </div>
 
         <div style={{ textAlign: "center", color: C.encre, fontSize: 20, fontWeight: 700, fontFamily: "'Georgia', serif", marginBottom: 6 }}>

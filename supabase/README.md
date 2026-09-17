@@ -25,6 +25,7 @@ base Supabase d'Alfred Workspace.
 | `seed-kpis.sql` | 5 INSERTs pour initialiser la table `public.kpis` avec les KPIs business par défaut (Entretiens/sem, Waitlist, Beta-testeurs, MRR, Churn). |
 | `migration-002-sprints-maxence.sql` | Sprints hebdo, rattachement ticket → sprint, `done_at` (burndown), commentaires, realtime, déblocage de Maxence comme assigné. **À lancer avant de déployer la branche sprints.** |
 | `sync-etat-2026-09.sql` | Optionnel. Aligne quelques statuts/notes sur l'état réel du projet (T002, T018, T019, T024, T029, T068). |
+| `reset-sprints.sql` | Efface tous les sprints et détache les tickets qui y étaient rattachés. Les tickets (statut, assignation, points, `done_at`) ne sont pas touchés. À lancer pour repartir d'une ardoise vierge après les sprints de test. |
 | `generate-seed.mjs` | Script Node qui régénère `seed-tickets.sql` à partir de `src/constants.js`. À relancer si on modifie les tickets par défaut. |
 
 ## Migration 002 — sprints (septembre 2026)

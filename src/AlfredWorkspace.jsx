@@ -69,7 +69,7 @@ function MemberGate({ session, onSignOut }) {
         height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         background: C.bg, padding: 24, textAlign: "center", gap: 14,
       }}>
-        <AlfredBowtie size={48} withText />
+        <AlfredBowtie size={48} withText layout="stack" />
         <div style={{ color: C.text, fontSize: 18, fontWeight: 700, fontFamily: "'Georgia', serif", marginTop: 12 }}>
           Accès réservé à l'équipe Alfred
         </div>
@@ -226,7 +226,7 @@ function AuthedApp({ session, onSignOut }) {
         height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         background: C.bg, padding: 24, textAlign: "center", gap: 18,
       }}>
-        <AlfredBowtie size={48} withText />
+        <AlfredBowtie size={48} withText layout="stack" />
         <div style={{ color: C.text, fontSize: 16, fontWeight: 700, fontFamily: "'Georgia', serif", marginTop: 12 }}>
           Impossible de charger les tickets
         </div>
@@ -340,6 +340,6 @@ function AuthedApp({ session, onSignOut }) {
 
 const FullScreenBowtie = () => (
   <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg }}>
-    <AlfredBowtie size={60} withText />
+    <AlfredBowtie size={60} withText layout="stack" />
   </div>
 );

@@ -2,32 +2,9 @@ import { useState, useEffect } from "react";
 import { C, FIB_COLORS, FIB_LABEL, STATUSES, QUADRANTS, memberById } from "../constants.js";
 
 // ═══════════════════════════════════════════════════════════════
-// ALFRED LOGO — Bowtie (charte officielle)
+// ALFRED LOGO — tracé du logo officiel, voir AlfredLogo.jsx
 // ═══════════════════════════════════════════════════════════════
-export const AlfredBowtie = ({ size = 36, withText = false, dark = false }) => {
-  return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: size * 0.25 }}>
-      <svg width={size * 1.4} height={size * 0.7} viewBox="0 0 140 70" xmlns="http://www.w3.org/2000/svg" style={{ display: "block" }}>
-        {/* Left wing */}
-        <path d="M 5 12 L 60 35 L 5 58 Z" fill={dark ? C.ivoire : C.encre} />
-        {/* Right wing */}
-        <path d="M 135 12 L 80 35 L 135 58 Z" fill={dark ? C.ivoire : C.encre} />
-        {/* Center knot */}
-        <rect x="61" y="22" width="18" height="26" rx="2" fill={C.champagne} />
-      </svg>
-      {withText && (
-        <span style={{
-          fontFamily: "'Georgia', 'Times New Roman', serif",
-          fontSize: size * 0.85,
-          fontWeight: 400,
-          color: dark ? C.ivoire : C.encre,
-          letterSpacing: "-0.02em",
-          fontStyle: "italic",
-        }}>alfred</span>
-      )}
-    </div>
-  );
-};
+export { AlfredBowtie } from "./AlfredLogo.jsx";
 
 // ═══════════════════════════════════════════════════════════════
 // UTILITY COMPONENTS
