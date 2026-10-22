@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { C, PHASES, QUADRANTS, TEAM, STATUSES, FIB_VALUES, FIB_COLORS, inputStyle, lblStyle } from "../constants.js";
+import { C, PHASES, QUADRANTS, TEAM, STATUSES, FAMILIES, FIB_VALUES, FIB_COLORS, inputStyle, lblStyle, isParked } from "../constants.js";
 import { formatRange, formatDateTime } from "../lib/dates.js";
 import { Btn, Avatar, Modal } from "./ui.jsx";
 import { Comments } from "./Comments.jsx";
@@ -79,6 +79,11 @@ export const TicketModal = ({ ticket, sprints = [], me, userEmail, onClose, onSa
                 border: `1px solid ${t.status === s.id ? s.color : C.border}`,
               }}>{s.icon} {s.label}</button>
             ))}
+            {isParked(t) && sprints.some((s) => s.id === t.sprintId && s.status !== "closed") && (
+              <div style={{ width: "100%", color: C.textMuted, fontSize: 11 }}>
+                À l'enregistrement, le ticket sort du sprint et repart au backlog.
+              </div>
+            )}
           </div>
 
           <label style={lblStyle}>Sprint</label>
@@ -145,6 +150,12 @@ export const TicketModal = ({ ticket, sprints = [], me, userEmail, onClose, onSa
           <label style={lblStyle}>Phase</label>
           <select value={t.phase} onChange={(e) => edit({ phase: e.target.value })} style={inputStyle}>
             {PHASES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+          </select>
+
+          <label style={lblStyle}>Famille</label>
+          <select value={t.famille || ""} onChange={(e) => edit({ famille: e.target.value || null })} style={inputStyle}>
+            <option value="">Sans famille</option>
+            {FAMILIES.map((f) => <option key={f.id} value={f.id}>{f.label} — {f.name} ({f.horizon})</option>)}
           </select>
 
           <label style={lblStyle}>Dépendances</label>

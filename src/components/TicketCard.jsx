@@ -1,5 +1,5 @@
 import { C, PHASES, QUADRANTS } from "../constants.js";
-import { Avatar, FibBadge } from "./ui.jsx";
+import { Avatar, FibBadge, FamilyTag } from "./ui.jsx";
 
 // ═══════════════════════════════════════════════════════════════
 // TICKET CARD — carte du board Kanban (draggable)
@@ -41,6 +41,7 @@ export const TicketCard = ({ t, onOpen, dragging, onDragStart, onDragEnd, highli
             padding: "1px 5px", background: `${phase.color}14`, borderRadius: 3,
           }}>{phase.short.split(" ")[0]}</span>
         )}
+        <FamilyTag familyId={t.famille} />
         {q && <span title={q.label} style={{ fontSize: 11 }}>{q.emoji}</span>}
         {t.notes?.trim() && <span title="A des notes" style={{ fontSize: 11, opacity: 0.7 }}>📝</span>}
         {depsCount > 0 && <span title={`Dépend de ${t.deps}`} style={{ fontSize: 10, color: C.textDim }}>⛓ {depsCount}</span>}

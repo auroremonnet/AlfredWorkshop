@@ -1,15 +1,18 @@
 import { useState, useMemo } from "react";
 import {
-  C, STATUSES, QUADRANTS, TEAM, PHASES, FIB_VALUES, FIB_LABEL,
-  selectStyle,
+  C, STATUSES, BOARD_STATUSES, QUADRANTS, TEAM, PHASES, FAMILIES, FIB_VALUES, FIB_LABEL,
+  selectStyle, isParked, familyById,
 } from "../constants.js";
-import { Btn, FibBadge, Avatar, StatCard, ErrorBanner } from "../components/ui.jsx";
+import { Btn, FibBadge, Avatar, StatCard, ProgressBar, ErrorBanner } from "../components/ui.jsx";
 import { Header } from "../components/Header.jsx";
 import { TicketRow } from "../components/TicketRow.jsx";
 import { EisenhowerView } from "../components/EisenhowerView.jsx";
 
 // ═══════════════════════════════════════════════════════════════
 // WORKSPACE / ROADMAP — les 159+ tickets par phase (liste + matrice)
+//
+// Les gelés / anciennes versions restent listés mais sortent des
+// stats d'avancement.
 //
 // Tickets, sprints et mutations viennent du shell. La fiche ticket est
 // globale : on l'ouvre via onOpenTicket(id).
@@ -22,6 +25,7 @@ export default function Workspace({
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterAssignee, setFilterAssignee] = useState("all");
   const [filterQuadrant, setFilterQuadrant] = useState("all");
+  const [filterFamille, setFilterFamille] = useState("all");
   const [search, setSearch] = useState("");
   const [listView, setListView] = useState("list"); // "list" | "matrix"
   const [exported, setExported] = useState(null);
@@ -34,27 +38,31 @@ export default function Workspace({
       if (filterStatus !== "all" && t.status !== filterStatus) return false;
       if (filterAssignee !== "all" && t.assignee !== filterAssignee) return false;
       if (filterQuadrant !== "all" && t.quadrant !== filterQuadrant) return false;
+      if (filterFamille === "none" ? t.famille : filterFamille !== "all" && t.famille !== filterFamille) return false;
       if (search && !`${t.id} ${t.title} ${t.desc}`.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [tickets, filterPhase, filterStatus, filterAssignee, filterQuadrant, search]);
+  }, [tickets, filterPhase, filterStatus, filterAssignee, filterQuadrant, filterFamille, search]);
 
   const stats = useMemo(() => {
+    const live = tickets.filter((t) => !isParked(t));
     const byStatus = STATUSES.reduce((acc, s) => ({ ...acc, [s.id]: tickets.filter((t) => t.status === s.id).length }), {});
-    const byAssignee = TEAM.reduce((acc, m) => ({ ...acc, [m.id]: tickets.filter((t) => t.assignee === m.id).length }), {});
-    const totalFib = tickets.reduce((s, t) => s + t.fib, 0);
-    const doneFib = tickets.filter((t) => t.status === "done").reduce((s, t) => s + t.fib, 0);
-    return { total: tickets.length, byStatus, byAssignee, totalFib, doneFib, progress: totalFib ? Math.round((doneFib / totalFib) * 100) : 0 };
+    const byAssignee = TEAM.reduce((acc, m) => ({ ...acc, [m.id]: live.filter((t) => t.assignee === m.id).length }), {});
+    const totalFib = live.reduce((s, t) => s + t.fib, 0);
+    const doneFib = live.filter((t) => t.status === "done").reduce((s, t) => s + t.fib, 0);
+    return { total: tickets.length, live: live.length, byStatus, byAssignee, totalFib, doneFib, progress: totalFib ? Math.round((doneFib / totalFib) * 100) : 0 };
   }, [tickets]);
 
+  // Clic sur le statut : avance dans les colonnes du board. Un gelé repart en « À faire ».
   const cycleStatus = (t) => {
-    const idx = STATUSES.findIndex((s) => s.id === t.status);
-    const next = STATUSES[(idx + 1) % STATUSES.length];
+    const idx = BOARD_STATUSES.findIndex((s) => s.id === t.status);
+    const next = BOARD_STATUSES[(idx + 1) % BOARD_STATUSES.length];
     updateTicket({ ...t, status: next.id });
   };
   const handleAddTicket = () => {
     onQuickAdd({
       phase: filterPhase !== "all" ? filterPhase : "p0",
+      ...(familyById(filterFamille) ? { famille: filterFamille } : {}),
       quadrant: filterQuadrant !== "all" ? filterQuadrant : "schedule",
       ...(filterAssignee !== "all" ? { assignee: filterAssignee } : {}),
     });
@@ -82,14 +90,15 @@ export default function Workspace({
       const ph = tickets.filter((t) => t.phase === phase.id);
       if (!ph.length) return;
       md += `\n### ${phase.label}\n*${phase.period}*\n\n`;
-      md += `| ID | Titre | Assigné | Sprint | Quadrant | Statut | Fib | Description |\n|---|---|---|---|---|---|---|---|\n`;
+      md += `| ID | Titre | Famille | Assigné | Sprint | Quadrant | Statut | Fib | Description |\n|---|---|---|---|---|---|---|---|---|\n`;
       ph.forEach((t) => {
         const status = STATUSES.find((s) => s.id === t.status)?.label || "—";
         const member = TEAM.find((m) => m.id === t.assignee)?.name || "—";
         const quad = QUADRANTS.find((q) => q.id === t.quadrant)?.short || "—";
         const desc = (t.desc || "—").replace(/\n/g, " ").replace(/\|/g, "\\|");
         const sprint = sprintById[t.sprintId]?.name || "Backlog";
-        md += `| ${t.id} | **${t.title}** | ${member} | ${sprint} | ${quad} | ${status} | ${t.fib} | ${desc} |\n`;
+        const fam = familyById(t.famille)?.label || "—";
+        md += `| ${t.id} | **${t.title}** | ${fam} | ${member} | ${sprint} | ${quad} | ${status} | ${t.fib} | ${desc} |\n`;
       });
     });
     setExported(md);
@@ -112,11 +121,15 @@ export default function Workspace({
       <div style={{ padding: "20px 28px", maxWidth: 1400, margin: "0 auto" }}>
         {/* ═══ STATS BAR ═══ */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 16 }}>
-          <StatCard label="Tickets total" value={stats.total} accent={C.encre} />
+          <StatCard label="Tickets actifs" value={stats.live} sub={`${stats.total} au total`} accent={C.encre} />
           <StatCard label="Points Fibonacci" value={stats.totalFib} sub={`${stats.doneFib} terminés`} accent={C.champagneDeep} />
-          <StatCard label="Avancement" value={`${stats.progress}%`} sub="basé sur les points" accent={C.emeraude} />
+          <StatCard label="Avancement" value={`${stats.progress}%`} sub="points, hors gelés" accent={C.emeraude} />
           {STATUSES.slice(0, 3).map((s) => <StatCard key={s.id} label={s.label} value={stats.byStatus[s.id] || 0} accent={s.color} />)}
+          <StatCard label="Gelés" value={stats.byStatus.frozen || 0} sub={`${stats.byStatus.legacy || 0} anciennes versions`} accent={C.frozen} />
         </div>
+
+        {/* ═══ FAMILLES ═══ */}
+        <FamilyPanel tickets={tickets} active={filterFamille} onPick={(id) => setFilterFamille(filterFamille === id ? "all" : id)} />
 
         {/* ═══ TEAM WORKLOAD ═══ */}
         <div style={{
@@ -185,6 +198,11 @@ export default function Workspace({
           <select value={filterQuadrant} onChange={(e) => setFilterQuadrant(e.target.value)} style={selectStyle}>
             <option value="all">Tous les quadrants</option>
             {QUADRANTS.map((q) => <option key={q.id} value={q.id}>{q.emoji} {q.short}</option>)}
+          </select>
+          <select value={filterFamille} onChange={(e) => setFilterFamille(e.target.value)} style={selectStyle} aria-label="Famille">
+            <option value="all">Toutes les familles</option>
+            {FAMILIES.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+            <option value="none">Sans famille</option>
           </select>
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={selectStyle}>
             <option value="all">Tous les statuts</option>
@@ -274,3 +292,64 @@ export default function Workspace({
     </div>
   );
 }
+
+// ═══════════════════════════════════════════════════════════════
+// FAMILY PANEL — carte Famille 1 (le périmètre V1) + une puce par
+// autre famille. Un clic filtre la liste.
+// ═══════════════════════════════════════════════════════════════
+const FamilyPanel = ({ tickets, active, onPick }) => {
+  const pts = (list) => list.reduce((s, t) => s + (t.fib || 0), 0);
+  const of = (id) => tickets.filter((t) => t.famille === id && t.status !== "legacy");
+  const f1 = familyById("f1");
+  const f1All = of("f1");
+  const f1Live = f1All.filter((t) => !isParked(t));
+  const f1Done = f1Live.filter((t) => t.status === "done");
+  const count = (list, status) => list.filter((t) => t.status === status).length;
+  const pickStyle = (f) => ({
+    cursor: "pointer", fontFamily: "inherit", textAlign: "left", borderRadius: 8,
+    background: active === f.id ? `${f.color}12` : C.bgPanel,
+    border: `1px solid ${active === f.id ? f.color : C.border}`,
+  });
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 1.3fr) minmax(0, 2fr)", gap: 12, marginBottom: 16 }} className="family-panel">
+      <button onClick={() => onPick("f1")} aria-pressed={active === "f1"} style={{ ...pickStyle(f1), padding: "14px 18px", borderTop: `3px solid ${f1.color}` }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ color: f1.color, fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" }}>{f1.label}</span>
+          <span style={{ color: C.textDim, fontSize: 11 }}>{f1.horizon}</span>
+        </div>
+        <div style={{ color: C.encre, fontSize: 15, fontWeight: 700, fontFamily: "'Georgia', serif", margin: "4px 0 10px" }}>{f1.name}</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 6 }}>
+          <span style={{ color: f1.color, fontSize: 24, fontWeight: 800, fontFamily: "'Georgia', serif" }}>{pts(f1Done)}</span>
+          <span style={{ color: C.textMuted, fontSize: 12 }}>/ {pts(f1Live)} pts livrés</span>
+        </div>
+        <ProgressBar value={pts(f1Done)} max={pts(f1Live)} color={f1.color} />
+        <div style={{ color: C.textMuted, fontSize: 11, marginTop: 8 }}>
+          {f1Done.length} / {f1Live.length} tickets terminés · {count(f1Live, "doing")} en cours · {count(f1Live, "blocked")} bloqués
+          {f1All.length > f1Live.length ? ` · ${f1All.length - f1Live.length} gelés` : ""}
+        </div>
+      </button>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8, alignContent: "start" }}>
+        {FAMILIES.filter((f) => f.id !== "f1").map((f) => {
+          const list = of(f.id);
+          const frozen = count(list, "frozen");
+          return (
+            <button key={f.id} onClick={() => onPick(f.id)} aria-pressed={active === f.id} title={f.name}
+              style={{ ...pickStyle(f), padding: "8px 12px", borderLeft: `3px solid ${f.color}` }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                <span style={{ color: C.encre, fontSize: 12, fontWeight: 700 }}>{f.label}</span>
+                <span style={{ flex: 1 }} />
+                <span style={{ color: f.color, fontSize: 14, fontWeight: 800, fontFamily: "'Georgia', serif" }}>{list.length}</span>
+              </div>
+              <div style={{ color: C.textDim, fontSize: 10, marginTop: 2 }}>
+                {f.horizon}{frozen ? ` · ${frozen} gelé${frozen > 1 ? "s" : ""}` : ""}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <style>{`@media (max-width: 760px) { .family-panel { grid-template-columns: 1fr !important; } }`}</style>
+    </div>
+  );
+};

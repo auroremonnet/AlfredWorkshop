@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { C, PHASES } from "../constants.js";
-import { Avatar, QuadrantPill, FibBadge, StatusPill } from "./ui.jsx";
+import { Avatar, QuadrantPill, FibBadge, StatusPill, FamilyTag } from "./ui.jsx";
 
 // ═══════════════════════════════════════════════════════════════
 // TICKET ROW
@@ -31,7 +31,10 @@ export const TicketRow = ({ t, sprint, onClick, onStatusCycle }) => {
         }}>{phase.short}</span>
       )}
       <div style={{ minWidth: 0 }}>
-        <div style={{ color: C.text, fontSize: 14, fontWeight: 600, marginBottom: 2, lineHeight: 1.3 }}>{t.title}</div>
+        <div style={{ color: C.text, fontSize: 14, fontWeight: 600, marginBottom: 2, lineHeight: 1.3 }}>
+          {t.famille && <span style={{ marginRight: 6, verticalAlign: "2px" }}><FamilyTag familyId={t.famille} /></span>}
+          {t.title}
+        </div>
         {t.desc && (
           <div style={{ color: C.textDim, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {t.desc}

@@ -40,6 +40,8 @@ export const C = {
   review: "#A855F7",
   done: "#1F6B4A",           // émeraude
   blocked: "#C73E47",
+  frozen: "#6B9AC4",         // bleu glacier
+  legacy: "#B8BCC6",
 };
 
 export const FIB_VALUES = [1, 2, 3, 5, 8, 13, 21];
@@ -52,7 +54,30 @@ export const STATUSES = [
   { id: "review",  label: "En revue",  color: C.review,  icon: "◑" },
   { id: "done",    label: "Terminé",   color: C.done,    icon: "●" },
   { id: "blocked", label: "Bloqué",    color: C.blocked, icon: "✕" },
+  { id: "frozen",  label: "Gelé",      color: C.frozen,  icon: "❄" },
+  { id: "legacy",  label: "Ancienne version", color: C.legacy, icon: "⊘" },
 ];
+
+// Gelé / Ancienne version : hors sprint, hors planification, hors vélocité.
+export const PARKED_STATUSES = ["frozen", "legacy"];
+export const isParked = (t) => PARKED_STATUSES.includes(t.status);
+// Tickets qui comptent dans un sprint (points, board, burndown, clôture)
+export const inSprint = (tickets, sprintId) => tickets.filter((t) => t.sprintId === sprintId && !isParked(t));
+// Colonnes du board (les statuts « rangés » n'y apparaissent pas)
+export const BOARD_STATUSES = STATUSES.filter((s) => !PARKED_STATUSES.includes(s.id));
+
+// ═══ FAMILLES — ce que le ticket sert (soutenance v10) ═══
+export const FAMILIES = [
+  { id: "socle", short: "Socle",     label: "Socle",     name: "Socle commun",                                   horizon: "Transverse",        color: "#0F1B2D" },
+  { id: "f1",    short: "F1",        label: "Famille 1", name: "Abonnements : repérer, ouvrir la page, vérifier", horizon: "V1 · déc. 2026",    color: "#1F6B4A" },
+  { id: "f2",    short: "F2",        label: "Famille 2", name: "Fin de promo, fin d'engagement box / mobile",     horizon: "V1.5 · début 2027", color: "#3B82F6" },
+  { id: "f3",    short: "F3",        label: "Famille 3", name: "Déménagement, nouveau travail",                   horizon: "V1.5 · début 2027", color: "#A855F7" },
+  { id: "f4",    short: "F4",        label: "Famille 4", name: "Retards de vol et de train",                      horizon: "V1.5 · début 2027", color: "#06B6D4" },
+  { id: "f5",    short: "F5",        label: "Famille 5", name: "Alfred attend votre argent",                      horizon: "V1.5 · début 2027", color: "#F97316" },
+  { id: "f6",    short: "F6",        label: "Famille 6", name: "Cagnotte",                                        horizon: "V2",                color: "#D4A95C" },
+  { id: "after", short: "Après PFE", label: "Après PFE", name: "Après la soutenance",                             horizon: "Après déc. 2026",   color: "#8B92A3" },
+];
+export const familyById = (id) => FAMILIES.find((f) => f.id === id) || null;
 
 // ═══ MATRICE EISENHOWER — 4 quadrants ═══
 export const QUADRANTS = [
@@ -85,8 +110,8 @@ export const PHASES = [
   { id: "p5",  label: "Phase 5 — Dev MVP Frontend",          short: "P5 Frontend",    period: "Mois 3-5",  color: "#84CC16" },
   { id: "p6",  label: "Phase 6 — Sécurité & Qualité",        short: "P6 Sécurité",    period: "Mois 4-5",  color: "#F59E0B" },
   { id: "p7",  label: "Phase 7 — Pré-lancement & Marketing", short: "P7 Marketing",   period: "Mois 4-5",  color: "#F97316" },
-  { id: "p8",  label: "Phase 8 — Lancement",                 short: "P8 Lancement",   period: "Mois 5-6",  color: "#EF4444" },
-  { id: "p9",  label: "Phase 9 — V1 Automatisation",         short: "P9 V1",          period: "Mois 5-8",  color: "#D4A95C" },
+  { id: "p8",  label: "Phase 8 — Soutenance",                short: "P8 Soutenance",   period: "Mois 5-6",  color: "#EF4444" },
+  { id: "p9",  label: "Phase 9 — V1.5",                      short: "P9 V1.5",        period: "Mois 5-8",  color: "#D4A95C" },
   { id: "p10", label: "Phase 10 — Scale & Série A",          short: "P10 Scale",      period: "Mois 8-12", color: "#A855F7" },
   { id: "p11", label: "Phase 11 — International & V3",       short: "P11 Intl",       period: "Mois 12+",  color: "#3B82F6" },
 ];

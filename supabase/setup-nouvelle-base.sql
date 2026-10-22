@@ -72,13 +72,16 @@ create table if not exists public.tickets (
   title       text not null,
   description text not null default '',
   status      text not null default 'À faire'
-              check (status in ('À faire', 'En cours', 'En revue', 'Terminé', 'Bloqué')),
+              check (status in ('À faire', 'En cours', 'En revue', 'Terminé', 'Bloqué',
+                                'Gelé', 'Ancienne version')),
   quadrant    text not null default 'Q2'
               check (quadrant in ('Q1', 'Q2', 'Q3', 'Q4')),
   fibonacci   int  not null default 3,
   phase       text not null default 'P0'
               check (phase ~ '^P([0-9]|1[01])$'),      -- P0 … P11
   assignee    text,                                    -- NULL = non assigné
+  famille     text                                     -- NULL = sans famille
+              check (famille is null or famille in ('Socle','F1','F2','F3','F4','F5','F6','Après PFE')),
   notes       text not null default '',
   deps        text not null default '',                -- "T001,T015"
   sprint_id   uuid references public.sprints(id) on delete set null,
@@ -90,6 +93,7 @@ create table if not exists public.tickets (
 
 create index if not exists tickets_sprint_id_idx on public.tickets (sprint_id);
 create index if not exists tickets_status_idx    on public.tickets (status);
+create index if not exists tickets_famille_idx   on public.tickets (famille);
 
 -- updated_at / updated_by automatiques
 create or replace function public.tickets_touch()

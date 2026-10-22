@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { C, STATUSES } from "./constants.js";
+import { C, STATUSES, isParked, inSprint as sprintScope } from "./constants.js";
 import { supabase } from "./lib/supabase.js";
 import { weeklySprintDraft, mondayOfISO, addDays, today } from "./lib/dates.js";
 import { useTickets } from "./hooks/useTickets.js";
@@ -121,6 +121,14 @@ function AuthedApp({ session, onSignOut }) {
   };
 
   // ─── Tickets ─────────────────────────────────────────────────
+  // Geler / passer en ancienne version sort le ticket d'un sprint actif
+  // ou planifié. Sprint clos : on garde sprint_id (historique, vélocité).
+  const updateTicket = (t) => {
+    const sprint = sprints.find((s) => s.id === t.sprintId);
+    const detach = isParked(t) && sprint && sprint.status !== "closed";
+    return ticketsHook.updateTicket(detach ? { ...t, sprintId: null } : t);
+  };
+
   const onOpenTicket = useCallback((id) => { if (id) setOpenTicketId(id); }, []);
 
   const nextTicketCode = () => {
@@ -175,7 +183,7 @@ function AuthedApp({ session, onSignOut }) {
 
   const onConfirmClose = async ({ moveTo, createReview }) => {
     const sprint = closingSprint;
-    const inSprint = tickets.filter((t) => t.sprintId === sprint.id);
+    const inSprint = sprintScope(tickets, sprint.id);
     const done = inSprint.filter((t) => t.status === "done");
     const blocked = inSprint.filter((t) => t.status === "blocked");
     const leftover = inSprint.filter((t) => t.status !== "done");
@@ -262,7 +270,7 @@ function AuthedApp({ session, onSignOut }) {
 
   return (
     <>
-      {view === "sprint" && <SprintBoard {...sprintProps} updateTicket={ticketsHook.updateTicket} />}
+      {view === "sprint" && <SprintBoard {...sprintProps} updateTicket={updateTicket} />}
 
       {view === "backlog" && <Backlog {...sprintProps} moveTickets={ticketsHook.moveTickets} />}
 
@@ -273,7 +281,7 @@ function AuthedApp({ session, onSignOut }) {
           sprints={sprints}
           onOpenTicket={onOpenTicket}
           onQuickAdd={(defaults) => quickAdd(null, defaults)}
-          updateTicket={ticketsHook.updateTicket}
+          updateTicket={updateTicket}
           resetToDefaults={ticketsHook.resetToDefaults}
           error={planningError}
           clearError={clearPlanningError}
@@ -310,7 +318,7 @@ function AuthedApp({ session, onSignOut }) {
           me={me}
           userEmail={userEmail}
           onClose={() => setOpenTicketId(null)}
-          onSave={ticketsHook.updateTicket}
+          onSave={updateTicket}
           onDelete={ticketsHook.deleteTicket}
         />
       )}

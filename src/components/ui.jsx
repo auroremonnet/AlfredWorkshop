@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { C, FIB_COLORS, FIB_LABEL, STATUSES, QUADRANTS, memberById } from "../constants.js";
+import { C, FIB_COLORS, FIB_LABEL, STATUSES, QUADRANTS, memberById, familyById } from "../constants.js";
 
 // ═══════════════════════════════════════════════════════════════
 // ALFRED LOGO — Bowtie (charte officielle)
@@ -103,6 +103,17 @@ export const StatusPill = ({ statusId, onClick }) => {
     }}>
       <span style={{ fontSize: 10 }}>{s.icon}</span>{s.label}
     </span>
+  );
+};
+
+export const FamilyTag = ({ familyId }) => {
+  const f = familyById(familyId);
+  if (!f) return null;
+  return (
+    <span title={`${f.label} — ${f.name} (${f.horizon})`} style={{
+      color: f.color, fontSize: 9, fontWeight: 800, letterSpacing: "0.05em", whiteSpace: "nowrap",
+      padding: "1px 5px", background: `${f.color}14`, border: `1px solid ${f.color}30`, borderRadius: 3,
+    }}>{f.short}</span>
   );
 };
 

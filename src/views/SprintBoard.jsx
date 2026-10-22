@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { C, STATUSES, MEMBERS, memberById } from "../constants.js";
+import { C, BOARD_STATUSES as STATUSES, MEMBERS, memberById, inSprint } from "../constants.js";
 import { today, daysBetween, formatRange, weeklySprintDraft, mondayOfISO, isoWeek, addDays } from "../lib/dates.js";
 import { Btn, Avatar, ProgressBar, ErrorBanner } from "../components/ui.jsx";
 import { Header } from "../components/Header.jsx";
@@ -11,7 +11,7 @@ import { Burndown } from "../components/SprintCharts.jsx";
 //
 // Glisser une carte dans une colonne = changer son statut.
 // En mode « Par membre », la glisser dans la ligne d'un autre membre
-// la réassigne aussi.
+// la réassigne aussi. Les gelés / anciennes versions n'y sont pas.
 // ═══════════════════════════════════════════════════════════════
 const pts = (list) => list.reduce((s, t) => s + (t.fib || 0), 0);
 
@@ -29,7 +29,7 @@ export default function SprintBoard({
   const [over, setOver] = useState(null);
 
   const sprintTickets = useMemo(
-    () => (active ? tickets.filter((t) => t.sprintId === active.id) : []),
+    () => (active ? inSprint(tickets, active.id) : []),
     [tickets, active],
   );
 
@@ -91,7 +91,7 @@ export default function SprintBoard({
           {planned.length > 0 && (
             <div style={{ margin: "22px 0", display: "flex", flexDirection: "column", gap: 10 }}>
               {planned.map((s) => {
-                const n = tickets.filter((t) => t.sprintId === s.id);
+                const n = inSprint(tickets, s.id);
                 return (
                   <div key={s.id} style={{
                     display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", background: C.bgPanel,

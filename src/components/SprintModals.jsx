@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { C, inputStyle, lblStyle } from "../constants.js";
+import { C, inputStyle, lblStyle, inSprint as sprintScope } from "../constants.js";
 import { formatRange, daysBetween } from "../lib/dates.js";
 import { Btn, Modal } from "./ui.jsx";
 
@@ -60,7 +60,7 @@ export const SprintModal = ({ sprint, onClose, onSave, onDelete }) => {
 // CLOSE SPRINT MODAL — bilan + destination des tickets non finis
 // ═══════════════════════════════════════════════════════════════
 export const CloseSprintModal = ({ sprint, tickets, sprints, reviewExists, onClose, onConfirm }) => {
-  const inSprint = tickets.filter((t) => t.sprintId === sprint.id);
+  const inSprint = sprintScope(tickets, sprint.id);
   const done = inSprint.filter((t) => t.status === "done");
   const left = inSprint.filter((t) => t.status !== "done");
   const pts = (list) => list.reduce((s, t) => s + (t.fib || 0), 0);

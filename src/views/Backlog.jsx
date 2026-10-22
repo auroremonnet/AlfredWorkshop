@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
-import { C, PHASES, QUADRANTS, STATUSES, MEMBERS, selectStyle } from "../constants.js";
+import { C, PHASES, QUADRANTS, STATUSES, MEMBERS, FAMILIES, selectStyle, isParked, inSprint } from "../constants.js";
 import { formatRange } from "../lib/dates.js";
-import { Btn, Avatar, FibBadge, StatusPill, ErrorBanner } from "../components/ui.jsx";
+import { Btn, Avatar, FibBadge, StatusPill, FamilyTag, ErrorBanner } from "../components/ui.jsx";
 import { Header } from "../components/Header.jsx";
 import { Velocity } from "../components/SprintCharts.jsx";
 import { Panel } from "./SprintBoard.jsx";
@@ -11,7 +11,8 @@ import { Panel } from "./SprintBoard.jsx";
 //
 // Sprint actif · sprints planifiés · backlog. On remplit le sprint de
 // la semaine en glissant des tickets, via le menu « Déplacer » de
-// chaque ligne, ou en sélection multiple.
+// chaque ligne, ou en sélection multiple. Les gelés / anciennes
+// versions sont masqués (case à cocher) et ne vont pas en sprint.
 // ═══════════════════════════════════════════════════════════════
 const pts = (list) => list.reduce((s, t) => s + (t.fib || 0), 0);
 const QUAD_ORDER = Object.fromEntries(QUADRANTS.map((q, i) => [q.id, i]));
@@ -32,7 +33,9 @@ export default function Backlog({
   const [phase, setPhase] = useState("all");
   const [member, setMember] = useState("all");
   const [quadrant, setQuadrant] = useState("all");
+  const [famille, setFamille] = useState("all");
   const [showDone, setShowDone] = useState(false);
+  const [showParked, setShowParked] = useState(false);
   const [sort, setSort] = useState("priority");
   const [collapsed, setCollapsed] = useState(() => new Set(["closed"]));
   const [selected, setSelected] = useState(() => new Set());
@@ -54,15 +57,20 @@ export default function Backlog({
   const matches = useMemo(() => (t) => {
     if (phase !== "all" && t.phase !== phase) return false;
     if (quadrant !== "all" && t.quadrant !== quadrant) return false;
+    if (famille === "none" ? t.famille : famille !== "all" && t.famille !== famille) return false;
     if (member === "me" && t.assignee !== me) return false;
     if (member !== "all" && member !== "me" && t.assignee !== member) return false;
     if (search && !`${t.id} ${t.title} ${t.desc}`.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
-  }, [phase, quadrant, member, search, me]);
+  }, [phase, quadrant, famille, member, search, me]);
 
-  const listFor = (sprintId) => tickets
-    .filter((t) => (sprintId ? t.sprintId === sprintId : !t.sprintId || !sprintIds.has(t.sprintId)))
-    .filter((t) => (sprintId ? true : showDone || t.status !== "done"))
+  // Backlog : hors sprint, plus les gelés encore rattachés à un sprint
+  const listFor = (sprintId) => (sprintId
+    ? inSprint(tickets, sprintId)
+    : tickets
+      .filter((t) => !t.sprintId || !sprintIds.has(t.sprintId) || isParked(t))
+      .filter((t) => showDone || t.status !== "done")
+      .filter((t) => showParked || !isParked(t)))
     .filter(matches)
     .sort(SORTS[sort]);
 
@@ -78,7 +86,12 @@ export default function Backlog({
     return n;
   });
 
-  const move = (ids, target) => moveTickets(ids, target === "backlog" || !target ? null : target);
+  // Un gelé / ancienne version ne part jamais en sprint
+  const move = (ids, target) => {
+    const dest = target === "backlog" || !target ? null : target;
+    const byId = new Map(tickets.map((t) => [t.id, t]));
+    return moveTickets(dest ? ids.filter((id) => !isParked(byId.get(id) || {})) : ids, dest);
+  };
 
   const dropZone = (key, target) => ({
     onDragOver: (e) => { e.preventDefault(); if (over !== key) setOver(key); },
@@ -120,7 +133,8 @@ export default function Backlog({
       <span title="Glisser pour déplacer" style={{ cursor: "grab", color: C.textDim, fontSize: 12, userSelect: "none" }}>⋮⋮</span>
       <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggleSelect(t.id)} aria-label={`Sélectionner ${t.id}`} />
       <button onClick={() => onOpenTicket(t.id)} style={{ ...plainBtn, color: C.champagneDeep, fontWeight: 700, fontFamily: "'Georgia', serif", fontSize: 11, textDecoration: t.status === "done" ? "line-through" : "none" }}>{t.id}</button>
-      <button onClick={() => onOpenTicket(t.id)} style={{ ...plainBtn, textAlign: "left", color: C.text, fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={t.title}>
+      <button onClick={() => onOpenTicket(t.id)} style={{ ...plainBtn, textAlign: "left", color: isParked(t) ? C.textDim : C.text, fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={t.title}>
+        {t.famille && <span style={{ marginRight: 6 }}><FamilyTag familyId={t.famille} /></span>}
         {t.title}
       </button>
       <span title={QUADRANTS.find((q) => q.id === t.quadrant)?.label} style={{ fontSize: 12 }}>{QUADRANTS.find((q) => q.id === t.quadrant)?.emoji}</span>
@@ -129,7 +143,8 @@ export default function Backlog({
       <StatusPill statusId={t.status} />
       <select value={currentKey} onChange={(e) => move([t.id], e.target.value)} aria-label={`Déplacer ${t.id}`}
         style={{ ...selectStyle, padding: "4px 6px", fontSize: 11 }}>
-        {destinations.map((d) => <option key={d.id} value={d.id}>{d.id === currentKey ? `↳ ${d.label}` : `→ ${d.label}`}</option>)}
+        {(isParked(t) ? destinations.filter((d) => d.id === "backlog") : destinations)
+          .map((d) => <option key={d.id} value={d.id}>{d.id === currentKey ? `↳ ${d.label}` : `→ ${d.label}`}</option>)}
       </select>
     </div>
   );
@@ -220,6 +235,11 @@ export default function Backlog({
             <option value="all">Toutes priorités</option>
             {QUADRANTS.map((q) => <option key={q.id} value={q.id}>{q.emoji} {q.short}</option>)}
           </select>
+          <select value={famille} onChange={(e) => setFamille(e.target.value)} style={selectStyle} aria-label="Famille">
+            <option value="all">Toutes les familles</option>
+            {FAMILIES.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+            <option value="none">Sans famille</option>
+          </select>
           <select value={sort} onChange={(e) => setSort(e.target.value)} style={selectStyle} aria-label="Tri">
             <option value="priority">Tri : priorité</option>
             <option value="phase">Tri : phase</option>
@@ -227,6 +247,9 @@ export default function Backlog({
           </select>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.textMuted, cursor: "pointer" }}>
             <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} /> Terminés au backlog
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.textMuted, cursor: "pointer" }}>
+            <input type="checkbox" checked={showParked} onChange={(e) => setShowParked(e.target.checked)} /> Gelés et anciennes versions
           </label>
         </div>
 
@@ -239,8 +262,8 @@ export default function Backlog({
               <Btn size="sm" variant="ghost" onClick={() => onQuickAdd(s.id)}>+ Ticket</Btn>
               <Btn size="sm" variant="ghost" onClick={() => onEditSprint(s)}>✎ Modifier</Btn>
               {s.status === "planned" && (
-                <Btn size="sm" variant="primary" onClick={() => onStartSprint(s)} disabled={!!active || !tickets.some((t) => t.sprintId === s.id)}
-                  title={active ? `Termine d'abord « ${active.name} »` : !tickets.some((t) => t.sprintId === s.id) ? "Ajoute au moins un ticket" : ""}>▶ Démarrer</Btn>
+                <Btn size="sm" variant="primary" onClick={() => onStartSprint(s)} disabled={!!active || !inSprint(tickets, s.id).length}
+                  title={active ? `Termine d'abord « ${active.name} »` : !inSprint(tickets, s.id).length ? "Ajoute au moins un ticket" : ""}>▶ Démarrer</Btn>
               )}
               {s.status === "active" && (
                 <Btn size="sm" variant="champagne" onClick={() => onRequestClose(s)}>Terminer</Btn>
@@ -262,7 +285,7 @@ export default function Backlog({
         {/* ═══ BACKLOG ═══ */}
         {section({
           key: "backlog", target: "backlog", list: backlogList,
-          title: "Backlog", meta: showDone ? "tous statuts" : "hors terminés",
+          title: "Backlog", meta: [!showDone && "hors terminés", !showParked && "hors gelés"].filter(Boolean).join(" · ") || "tous statuts",
           actions: <Btn size="sm" variant="ghost" onClick={() => onQuickAdd(null)}>+ Ticket</Btn>,
         })}
 

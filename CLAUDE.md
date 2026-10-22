@@ -74,6 +74,9 @@ Code : `src/AlfredWorkspace.jsx` (shell), `src/views/`, `src/components/`, `src/
 Schéma : `supabase/migration-*.sql` — toute évolution de schéma = nouvelle migration,
 exécutée dans Supabase **avant** de pousser le code qui l'utilise.
 Équipe : `TEAM` dans `src/constants.js` + `ASSIGNEE_TO_DB` dans `src/lib/ticketMapping.js`.
+Statuts `Gelé` (dégelable) et `Ancienne version` : hors sprint, hors planification, hors
+vélocité. Les geler retire le ticket d'un sprint actif ou planifié (un sprint clos le garde).
+Familles : `FAMILIES` dans `src/constants.js` + `FAMILLE_TO_DB` dans `src/lib/ticketMapping.js`.
 
 **Rituel** : sprint d'une semaine (lundi → dimanche). Planning le lundi dans Backlog,
 clôture le dimanche (non-finis → sprint suivant, weekly review pré-remplie).
@@ -95,8 +98,8 @@ branches et PRs. Permet le tracking croisé code ↔ roadmap.
 - **P5** Dev MVP Frontend (M3-M5)
 - **P6** Sécurité & qualité (M4-M5)
 - **P7** Pré-lancement & marketing (M4-M5)
-- **P8** Lancement (M5-M6)
-- **P9** V1 Automatisation négo (M5-M8)
+- **P8** Soutenance (M5-M6)
+- **P9** V1.5 (M5-M8)
 - **P10** Scale & Série A (M8-M12)
 - **P11** International & V3 (M12+)
 
@@ -107,11 +110,24 @@ branches et PRs. Permet le tracking croisé code ↔ roadmap.
 ## 7. Périmètre produit — ce qu'Alfred FAIT
 
 - **Détection passive** : abonnements morts/inutilisés, factures à venir, fraudes silencieuses, doublons
-- **Négociation active** : forfait mobile, assurances (auto/habitation/mutuelle), énergie
 - **Récupération de droits** : indemnisations vols (règlement CE 261/2004), retards, parrainages dormants
 - **Simulation what-if temps réel** : impact d'une décision financière en direct
-- **Lettres de réclamation auto** : avec review humaine en V1, full-auto à partir de V2 sur cas simples
-- **Sécurité/urgence** : détection anomalies, blocage carte (lien vers la banque), dossier contestation
+- **Lettres en plan B** quand la page du prestataire ne marche pas
+- **IA en V1** : assistant pendant la démarche (T252) et paragraphe personnalisé des lettres (T127),
+  via AWS Bedrock en région UE (ADR-007). L'IA ne voit jamais la page du prestataire, ne lit ni
+  ne stocke d'identifiants, et chaque réponse est journalisée (`actions.ai_audit_log`).
+- **Sécurité/urgence** : détection anomalies, dossier contestation
+
+**Les 6 familles** (colonne `famille` des tickets, + `Socle` et `Après PFE`) :
+
+| Famille | Périmètre                                              | Horizon            |
+|---------|--------------------------------------------------------|--------------------|
+| F1      | Abonnements : repérer, ouvrir la page, vérifier        | V1 — déc. 2026     |
+| F2      | Fin de promo, fin d'engagement box / mobile            | V1.5 — début 2027  |
+| F3      | Déménagement, nouveau travail (ce qui se dédouble)     | V1.5 — début 2027  |
+| F4      | Retards de vol et de train                             | V1.5 — début 2027  |
+| F5      | Alfred attend votre argent (sommes dues)               | V1.5 — début 2027  |
+| F6      | Cagnotte                                               | V2                 |
 
 ## 8. Périmètre produit — ce qu'Alfred NE FAIT PAS (V1-V2)
 
@@ -174,4 +190,4 @@ App Alfred (mobile + backend) : commandes à définir au démarrage de P3.
 
 ---
 
-*Dernière maj : 10 septembre 2026 — sprints hebdo + arrivée de Maxence*
+*Dernière maj : 22 octobre 2026 — statuts Gelé / Ancienne version, familles F1 → F6*
