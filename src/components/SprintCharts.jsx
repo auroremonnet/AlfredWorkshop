@@ -1,4 +1,4 @@
-import { C } from "../constants.js";
+import { C, inSprint as sprintScope } from "../constants.js";
 import { dateRange, today, formatDay } from "../lib/dates.js";
 
 // ═══════════════════════════════════════════════════════════════
@@ -11,7 +11,7 @@ import { dateRange, today, formatDay } from "../lib/dates.js";
 export const Burndown = ({ sprint, tickets }) => {
   const days = dateRange(sprint.startDate, sprint.endDate);
   if (days.length < 2) return null;
-  const inSprint = tickets.filter((t) => t.sprintId === sprint.id);
+  const inSprint = sprintScope(tickets, sprint.id);
   const scope = inSprint.reduce((s, t) => s + (t.fib || 0), 0);
   const now = today();
 

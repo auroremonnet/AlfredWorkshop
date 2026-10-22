@@ -4,7 +4,7 @@
 //
 // L'app raisonne en clés de domaine : "todo", "do", "p0", "basile".
 // La DB stocke des libellés lisibles à l'œil nu : "À faire", "Q1",
-// "P0", "Basile" (NULL si non assigné).
+// "P0", "Basile" (NULL si non assigné), "F1" (NULL si sans famille).
 //
 // Ces fonctions sont les SEULES portes entre les deux représentations
 // (utilisées uniquement dans src/hooks/useTickets.js).
@@ -17,6 +17,8 @@ export const STATUS_TO_DB = {
   review: "En revue",
   done: "Terminé",
   blocked: "Bloqué",
+  frozen: "Gelé",
+  legacy: "Ancienne version",
 };
 const STATUS_FROM_DB = invert(STATUS_TO_DB);
 
@@ -32,6 +34,19 @@ const QUADRANT_FROM_DB = invert(QUADRANT_TO_DB);
 // ─── PHASE (mapping trivial : p0 ↔ P0) ───
 const phaseToDb = (id) => (id ? id.toUpperCase() : id);
 const phaseFromDb = (label) => (label ? label.toLowerCase() : label);
+
+// ─── FAMILLE (nullable) ───
+export const FAMILLE_TO_DB = {
+  socle: "Socle",
+  f1: "F1",
+  f2: "F2",
+  f3: "F3",
+  f4: "F4",
+  f5: "F5",
+  f6: "F6",
+  after: "Après PFE",
+};
+const FAMILLE_FROM_DB = invert(FAMILLE_TO_DB);
 
 // ─── ASSIGNEE ───
 export const ASSIGNEE_TO_DB = {
@@ -64,6 +79,7 @@ export function fromDb(row) {
     quadrant: QUADRANT_FROM_DB[row.quadrant] ?? "schedule",
     fib: row.fibonacci,
     phase: phaseFromDb(row.phase),
+    famille: FAMILLE_FROM_DB[row.famille] ?? null,
     assignee: row.assignee === null ? "unassigned" : (ASSIGNEE_FROM_DB[row.assignee] ?? "unassigned"),
     notes: row.notes ?? "",
     deps: row.deps ?? "",
@@ -87,6 +103,7 @@ export function toDb(t) {
     quadrant: QUADRANT_TO_DB[t.quadrant] ?? "Q2",
     fibonacci: t.fib,
     phase: phaseToDb(t.phase),
+    famille: FAMILLE_TO_DB[t.famille] ?? null,
     assignee: ASSIGNEE_TO_DB[t.assignee] ?? null,
     notes: t.notes ?? "",
     deps: t.deps ?? "",

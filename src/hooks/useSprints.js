@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabase.js";
 import { fromDb, toDb } from "../lib/sprintMapping.js";
 import { humanize } from "../lib/dbErrors.js";
+import { inSprint as sprintScope } from "../constants.js";
 
 // ═══════════════════════════════════════════════════════════════
 // useSprints — sprints hebdo (table public.sprints)
@@ -104,8 +105,7 @@ export function useSprints() {
       setError(`« ${already.name} » est encore actif. Termine-le avant d'en démarrer un autre.`);
       return false;
     }
-    const committed = (ticketsApi?.tickets || [])
-      .filter((t) => t.sprintId === sprint.id)
+    const committed = sprintScope(ticketsApi?.tickets || [], sprint.id)
       .reduce((sum, t) => sum + (t.fib || 0), 0);
     return updateSprint({
       ...sprint,
@@ -118,7 +118,8 @@ export function useSprints() {
   // ─── CLOSE ───────────────────────────────────────────────────
   // moveTo : null (backlog) | uuid d'un sprint existant
   const closeSprint = useCallback(async (sprint, { moveTo = null } = {}, ticketsApi) => {
-    const inSprint = (ticketsApi?.tickets || []).filter((t) => t.sprintId === sprint.id);
+    // Les gelés / anciennes versions restent rattachés au sprint clos
+    const inSprint = sprintScope(ticketsApi?.tickets || [], sprint.id);
     const done = inSprint.filter((t) => t.status === "done");
     const leftover = inSprint.filter((t) => t.status !== "done").map((t) => t.id);
 
